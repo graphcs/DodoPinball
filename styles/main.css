@@ -1,0 +1,142 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#hud .hud-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+}
+
+#hud .hud-item {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(255,200,0,0.6);
+  letter-spacing: 1px;
+}
+
+#hud .hud-score {
+  font-size: 28px;
+  color: #ffd700;
+  font-variant-numeric: tabular-nums;
+}
+
+#hud .hud-multiplier {
+  color: #ff6b35;
+}
+
+#overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 20;
+  pointer-events: none;
+}
+
+#overlay.active {
+  pointer-events: auto;
+}
+
+#overlay .screen {
+  text-align: center;
+  color: #fff;
+}
+
+#overlay .screen h1 {
+  font-size: 56px;
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255,200,0,0.8), 0 4px 8px rgba(0,0,0,0.5);
+  margin-bottom: 20px;
+  letter-spacing: 4px;
+}
+
+#overlay .screen h2 {
+  font-size: 28px;
+  color: #ff6b35;
+  text-shadow: 0 0 12px rgba(255,107,53,0.6);
+  margin-bottom: 30px;
+}
+
+#overlay .screen .controls {
+  font-size: 16px;
+  line-height: 2;
+  color: #ccc;
+  margin-bottom: 30px;
+}
+
+#overlay .screen .controls kbd {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+#overlay .screen .prompt {
+  font-size: 20px;
+  color: #ffd700;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+#overlay .screen .final-score {
+  font-size: 48px;
+  color: #ffd700;
+  margin: 20px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+#overlay .screen .high-score {
+  font-size: 20px;
+  color: #ff6b35;
+  margin-bottom: 30px;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
