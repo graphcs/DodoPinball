@@ -52,9 +52,9 @@ export const TableLayout = {
 
   // Bumper positions
   bumpers: [
-    { x: -0.6, z: -0.6, color: 0xff4400, score: 200 },
-    { x: 0.2, z: 0.6, color: 0xff0044, score: 400 },
-    { x: 0.0, z: -1.7, color: 0xff4400, score: 600 },
+    { x: -0.6, z: 1.0, color: 0xff4400, score: 200 },
+    { x: 0.8, z: 2.2, color: 0xff0044, score: 400 },
+    { x: -0.5, z: -0.8, color: 0xff4400, score: 600 },
   ],
 
   // Slingshot vertices (triangular kickers above flippers)

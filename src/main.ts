@@ -631,12 +631,12 @@ async function main() {
     switch (action) {
       case 'leftFlipper':
         table.leftFlipper.setActive(pressed);
-        if (pressed) audio.playFlipperUp();
+        if (pressed) { audio.playFlipperUp(); audio.playBumperHit(); }
         else audio.playFlipperDown();
         break;
       case 'rightFlipper':
         table.rightFlipper.setActive(pressed);
-        if (pressed) audio.playFlipperUp();
+        if (pressed) { audio.playFlipperUp(); audio.playBumperHit(); }
         else audio.playFlipperDown();
         break;
       case 'plunger':
@@ -787,19 +787,19 @@ async function main() {
       const vel = table.ball.body.linvel();
       const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
       const pushX = ballPos.x > 0 ? -1 : 1;
-      const ARCH_BOUNCE = 1.2;
+      const ARCH_BOUNCE = 1.6;
 
       if (speed < 0.5) {
         // Ball is stuck - push it away firmly toward center and down
         table.ball.body.setLinvel(
-          new RAPIER.Vector3(pushX * ARCH_BOUNCE, 0.1, ARCH_BOUNCE * 0.6),
+          new RAPIER.Vector3(pushX * ARCH_BOUNCE, 0.1, ARCH_BOUNCE * 0.8),
           true,
         );
       } else {
         table.ball.applyImpulse({
-          x: pushX * ARCH_BOUNCE * 0.4,
+          x: pushX * ARCH_BOUNCE * 0.6,
           y: 0,
-          z: ARCH_BOUNCE * 0.4,
+          z: ARCH_BOUNCE * 0.6,
         });
       }
     }
