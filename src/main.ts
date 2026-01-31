@@ -381,7 +381,7 @@ async function main() {
 
     const maxDim = Math.max(sSize.x, sSize.y, sSize.z);
     const sScale = (TABLE_LENGTH * 0.7) / (maxDim || 1);
-    slide.scale.setScalar(sScale * 0.98 * 0.98);
+    slide.scale.setScalar(sScale * 0.98 * 0.98 * 0.96 * 0.96);
 
     const scaledSBox = new THREE.Box3().setFromObject(slide);
     const scaledSCenter = new THREE.Vector3();
@@ -524,7 +524,7 @@ async function main() {
     aBox.getCenter(aCenter);
 
     const maxDim = Math.max(aSize.x, aSize.y, aSize.z);
-    const aScale = (TABLE_LENGTH * 0.402) / (maxDim || 1);
+    const aScale = (TABLE_LENGTH * 0.402 * 0.98 * 0.98) / (maxDim || 1);
     archs.scale.setScalar(aScale);
 
     const scaledABox = new THREE.Box3().setFromObject(archs);
