@@ -340,9 +340,9 @@ async function main() {
     // Rotate cones: tip along -Z, then flip 180 on Z
     outerFlame.rotation.set(Math.PI / 2, 0, Math.PI);
     innerFlame.rotation.set(Math.PI / 2, 0, Math.PI);
-    innerFlame.position.z = 0.13;
+    innerFlame.position.z = 0.15;
     coreFlame.rotation.set(Math.PI / 2, 0, Math.PI);
-    coreFlame.position.z = 0.1;
+    coreFlame.position.z = 0.3;
 
     sceneManager.scene.add(flameGroup);
 
