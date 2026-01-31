@@ -69,7 +69,7 @@ export class Slingshot extends Entity {
           0,
           Math.cos(angle / 2),
         ))
-        .setRestitution(1.5)
+        .setRestitution(0.8)
         .setFriction(0.1);
       world.createCollider(wallDesc, body);
     }

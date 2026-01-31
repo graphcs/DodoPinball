@@ -226,6 +226,12 @@ async function main() {
   }
 
   // ---- Rocket ----
+  let rocketGroup: THREE.Group | undefined;
+  let rocketCenterX = 0;
+  let rocketCenterZ = -2.5;
+  const rocketOrbitRadius = 4.0;
+  const rocketOrbitSpeed = 0.4;
+  const rocketBaseY = 4;
   if (rocketModel) {
     const rocket = rocketModel.clone();
     rocket.traverse((child) => {
@@ -268,63 +274,83 @@ async function main() {
     const scaledRCenter = new THREE.Vector3();
     scaledRBox.getCenter(scaledRCenter);
 
-    // Position on the left side of the table, upper area
-    const HL = TABLE_LENGTH / 2;
-    rocket.position.set(
-      -scaledRCenter.x - 0.8,
-      -scaledRBox.min.y,
-      -scaledRCenter.z - 2.5,
-    );
-    sceneManager.scene.add(rocket);
+    // Center the model at the group origin
+    rocket.position.set(-scaledRCenter.x + 0.1, -scaledRCenter.y + 1.2, -scaledRCenter.z);
 
-    // Add trimesh collider with bounce
-    rocket.updateMatrixWorld(true);
+    // Wrap in a group for orbit animation
+    rocketGroup = new THREE.Group();
+    rocketGroup.add(rocket);
 
-    const rVertices: number[] = [];
-    const rIndices: number[] = [];
-    let rVertexOffset = 0;
+    // Lay the rocket on its side so it flies horizontally
+    rocket.rotation.x = Math.PI / 2;
+    rocket.rotation.z = 0;
 
-    rocket.traverse((child) => {
-      if (!(child as THREE.Mesh).isMesh) return;
-      const mesh = child as THREE.Mesh;
-      const geo = mesh.geometry;
-      const posAttr = geo.getAttribute('position');
-      if (!posAttr) return;
+    // Rocket half-length for flame offset (stored for animation loop)
+    const rocketHalfLen = scaledRBox.getSize(new THREE.Vector3()).y / 2;
 
-      const vertex = new THREE.Vector3();
-      for (let i = 0; i < posAttr.count; i++) {
-        vertex.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
-        mesh.localToWorld(vertex);
-        rVertices.push(vertex.x, vertex.y, vertex.z);
-      }
+    // Create flame meshes as scene-level objects (positioned each frame)
+    const flameGroup = new THREE.Group();
 
-      if (geo.index) {
-        for (let i = 0; i < geo.index.count; i++) {
-          rIndices.push(geo.index.array[i] + rVertexOffset);
-        }
-      } else {
-        for (let i = 0; i < posAttr.count; i++) {
-          rIndices.push(i + rVertexOffset);
-        }
-      }
-
-      rVertexOffset += posAttr.count;
+    const outerFlameGeo = new THREE.ConeGeometry(0.15, rocketHalfLen * 0.8, 8);
+    const outerFlameMat = new THREE.MeshBasicMaterial({
+      color: 0xff4400, transparent: true, opacity: 0.8,
+      blending: THREE.AdditiveBlending, depthWrite: false,
     });
+    const outerFlame = new THREE.Mesh(outerFlameGeo, outerFlameMat);
+    flameGroup.add(outerFlame);
 
-    if (rVertices.length > 0 && rIndices.length > 0) {
-      const vertices = new Float32Array(rVertices);
-      const indices = new Uint32Array(rIndices);
+    const innerFlameGeo = new THREE.ConeGeometry(0.08, rocketHalfLen * 0.55, 8);
+    const innerFlameMat = new THREE.MeshBasicMaterial({
+      color: 0xffcc00, transparent: true, opacity: 0.9,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const innerFlame = new THREE.Mesh(innerFlameGeo, innerFlameMat);
+    flameGroup.add(innerFlame);
 
-      const rBodyDesc = RAPIER.RigidBodyDesc.fixed();
-      const rBody = physicsWorld.world.createRigidBody(rBodyDesc);
+    const coreFlameGeo = new THREE.ConeGeometry(0.05, rocketHalfLen * 0.35, 8);
+    const coreFlameMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.95,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const coreFlame = new THREE.Mesh(coreFlameGeo, coreFlameMat);
+    flameGroup.add(coreFlame);
 
-      const trimeshDesc = RAPIER.ColliderDesc.trimesh(vertices, indices)
-        .setRestitution(0.8)
-        .setFriction(0.1)
-        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
-      const rCollider = physicsWorld.world.createCollider(trimeshDesc, rBody);
-      collisionHandler.registerCollider(rCollider.handle, ColliderTag.Rocket, 0);
-    }
+    // Add animated tip extensions for each flame
+    const outerTipGeo = new THREE.ConeGeometry(0.08, rocketHalfLen * 0.4, 8);
+    const outerTip = new THREE.Mesh(outerTipGeo, outerFlameMat.clone());
+    (outerTip.material as THREE.MeshBasicMaterial).opacity = 0.6;
+    outerTip.position.y = -(rocketHalfLen * 0.8) / 2 - rocketHalfLen * 0.15;
+    outerFlame.add(outerTip);
+
+    const innerTipGeo = new THREE.ConeGeometry(0.04, rocketHalfLen * 0.3, 8);
+    const innerTip = new THREE.Mesh(innerTipGeo, innerFlameMat.clone());
+    (innerTip.material as THREE.MeshBasicMaterial).opacity = 0.7;
+    innerTip.position.y = -(rocketHalfLen * 0.55) / 2 - rocketHalfLen * 0.1;
+    innerFlame.add(innerTip);
+
+    const coreTipGeo = new THREE.ConeGeometry(0.02, rocketHalfLen * 0.2, 8);
+    const coreTip = new THREE.Mesh(coreTipGeo, coreFlameMat.clone());
+    (coreTip.material as THREE.MeshBasicMaterial).opacity = 0.8;
+    coreTip.position.y = -(rocketHalfLen * 0.35) / 2 - rocketHalfLen * 0.08;
+    coreFlame.add(coreTip);
+
+    // Store tips for animation
+    (rocketGroup as any)._flameTips = [outerTip, innerTip, coreTip];
+
+    // Rotate cones: tip along -Z, then flip 180 on Z
+    outerFlame.rotation.set(Math.PI / 2, 0, Math.PI);
+    innerFlame.rotation.set(Math.PI / 2, 0, Math.PI);
+    coreFlame.rotation.set(Math.PI / 2, 0, Math.PI);
+
+    sceneManager.scene.add(flameGroup);
+
+    // Store for animation
+    (rocketGroup as any)._flameGroup = flameGroup;
+    (rocketGroup as any)._rocketHalfLen = rocketHalfLen;
+
+    // Position high above the playfield
+    rocketGroup.position.set(rocketCenterX + rocketOrbitRadius, rocketBaseY, rocketCenterZ);
+    sceneManager.scene.add(rocketGroup);
   }
 
   // ---- Slide (with trimesh collider for ball to run on) ----
@@ -353,7 +379,7 @@ async function main() {
 
     const maxDim = Math.max(sSize.x, sSize.y, sSize.z);
     const sScale = (TABLE_LENGTH * 0.7) / (maxDim || 1);
-    slide.scale.setScalar(sScale);
+    slide.scale.setScalar(sScale * 0.98 * 0.98);
 
     const scaledSBox = new THREE.Box3().setFromObject(slide);
     const scaledSCenter = new THREE.Vector3();
@@ -361,12 +387,12 @@ async function main() {
 
     // Position on the table and tilt the back end up
     slide.position.set(
-      -scaledSCenter.x - 0.5,
+      -scaledSCenter.x - 0.7,
       -scaledSBox.min.y + 0.15,
       -scaledSCenter.z - 1.3,
     );
     // Rotate slightly around X axis to tilt the back (top) end up
-    slide.rotation.x = 0.18;
+    slide.rotation.x = 0.10;
     sceneManager.scene.add(slide);
 
     // Add trimesh collider so ball can run on the slide
@@ -506,7 +532,7 @@ async function main() {
     archs.position.set(
       -scaledACenter.x - 0.2,
       -scaledABox.min.y,
-      -scaledACenter.z,
+      -scaledACenter.z - 0.1,
     );
     sceneManager.scene.add(archs);
 
@@ -898,7 +924,7 @@ async function main() {
   const preLaunchCameraPos = new THREE.Vector3(0, 7, 14);
   const preLaunchLookAt = new THREE.Vector3(0, 0, -3);
   // Follow camera: more top-down, offset behind/above ball
-  const followCameraOffset = new THREE.Vector3(0, 16, 6);
+  const followCameraOffset = new THREE.Vector3(0, 14, 5);
   const followLookAtOffset = new THREE.Vector3(0, 0, -2);
   const currentCameraPos = sceneManager.camera.position.clone();
   const currentLookAt = preLaunchLookAt.clone();
@@ -965,6 +991,45 @@ async function main() {
         const time = performance.now() / 1000;
         dodoAstronaut.position.y = dodoBaseY + Math.sin(time * 1.4) * 0.3;
       }
+
+      // Animate Rocket in circular orbit, nose facing direction of travel
+      if (rocketGroup) {
+        const time = performance.now() / 1000;
+        const angle = time * rocketOrbitSpeed;
+        rocketGroup.position.x = rocketCenterX + Math.cos(angle) * rocketOrbitRadius;
+        rocketGroup.position.z = rocketCenterZ + Math.sin(angle) * rocketOrbitRadius;
+        rocketGroup.position.y = rocketBaseY + Math.sin(time * 1.2) * 0.4;
+        // Point the rocket in the direction of travel (tangent to the circle)
+        rocketGroup.rotation.y = -angle;
+
+        // Position flame behind the rocket along the orbit tangent
+        const fg = (rocketGroup as any)._flameGroup as THREE.Group | undefined;
+        const halfLen = (rocketGroup as any)._rocketHalfLen as number;
+        if (fg && halfLen) {
+          // The rocket faces along the tangent; the back is opposite the travel direction
+          // Travel direction tangent: (-sin(angle), cos(angle))
+          // Back direction: (sin(angle), -cos(angle))
+          const backDist = halfLen * 0.8 - 0.6 + 0.04;
+          const backX = Math.sin(angle) * backDist;
+          const backZ = -Math.cos(angle) * backDist;
+          fg.position.set(
+            rocketGroup.position.x + backX,
+            rocketGroup.position.y + 0.03,
+            rocketGroup.position.z + backZ,
+          );
+          // Point flames away from travel direction
+          fg.rotation.y = -angle;
+
+          // Animate flame tips (extend/retract)
+          const tips = (rocketGroup as any)._flameTips as THREE.Mesh[] | undefined;
+          if (tips) {
+            tips.forEach((tip, i) => {
+              const stretch = 0.7 + Math.sin(time * 10 + i * 2.5) * 0.3 + Math.sin(time * 16 + i * 1.7) * 0.2;
+              tip.scale.y = stretch;
+            });
+          }
+        }
+      }
       particleSystem.update(1 / 60);
 
       // Camera follow logic
@@ -974,16 +1039,16 @@ async function main() {
       if (state.isBallInPlay && table.ball.body) {
         const ballPos = table.ball.body.translation();
         // Clamp ball Z to keep camera within reasonable bounds
-        const clampedZ = Math.max(-3, Math.min(3, ballPos.z));
+        const clampedZ = Math.max(-3, Math.min(30, ballPos.z));
         targetCameraPos = new THREE.Vector3(
           ballPos.x * 0.1,
           followCameraOffset.y,
-          clampedZ * 0.4 + followCameraOffset.z,
+          clampedZ * 0.5 + followCameraOffset.z,
         );
         targetLookAt = new THREE.Vector3(
           ballPos.x * 0.08,
           0,
-          clampedZ * 0.4 + followLookAtOffset.z,
+          clampedZ * 0.5 + followLookAtOffset.z,
         );
       } else {
         targetCameraPos = preLaunchCameraPos;

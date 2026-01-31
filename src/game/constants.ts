@@ -9,7 +9,7 @@ export const PLAYFIELD_THICKNESS = 0.2;
 // ---- Ball ----
 export const BALL_RADIUS = 0.13;
 export const BALL_MASS = 0.08;
-export const BALL_RESTITUTION = 0.4;
+export const BALL_RESTITUTION = 0.2;
 export const BALL_FRICTION = 0.2;
 export const BALL_LINEAR_DAMPING = 0.05;
 export const BALL_ANGULAR_DAMPING = 0.1;
