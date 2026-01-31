@@ -20,47 +20,100 @@ export class Bumper extends Entity {
     x: number,
     z: number,
     color: number = 0xff4400,
+    model?: THREE.Group,
   ) {
-    // Bumper ring
-    const ringGeo = new THREE.CylinderGeometry(
-      BUMPER_RADIUS,
-      BUMPER_RADIUS,
-      BUMPER_HEIGHT,
-      24,
-    );
-    const baseMat = materials.plastic(color);
-    const ringMesh = new THREE.Mesh(ringGeo, baseMat);
-    ringMesh.position.set(x, BUMPER_HEIGHT / 2, z);
-    ringMesh.castShadow = true;
-    scene.add(ringMesh);
+    const group = new THREE.Group();
+    let ringMesh: THREE.Mesh;
+    let capMesh: THREE.Mesh;
+    let baseMat: THREE.MeshStandardMaterial;
+    let emissiveMat: THREE.MeshStandardMaterial;
 
-    // Cap on top
-    const capGeo = new THREE.CylinderGeometry(
-      BUMPER_RADIUS * 0.8,
-      BUMPER_RADIUS * 0.8,
-      0.05,
-      24,
-    );
-    const emissiveMat = materials.emissive(color, 0);
-    const capMesh = new THREE.Mesh(capGeo, emissiveMat);
-    capMesh.position.set(x, BUMPER_HEIGHT + 0.025, z);
-    scene.add(capMesh);
+    if (model) {
+      console.log('Loading bumper model at', x, z);
+      const clone = model.clone();
+      // Compute bounding box and scale to fit bumper size
+      const box = new THREE.Box3().setFromObject(clone);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      console.log('Bumper model native size:', size.x, size.y, size.z);
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const uniformScale = (BUMPER_RADIUS * 3.375) / (maxDim || 1);
+      clone.scale.setScalar(uniformScale);
+
+      // Recompute after scaling
+      const scaledBox = new THREE.Box3().setFromObject(clone);
+      const scaledCenter = new THREE.Vector3();
+      scaledBox.getCenter(scaledCenter);
+
+      clone.position.set(-scaledCenter.x, -scaledBox.min.y, -scaledCenter.z);
+
+      let meshCount = 0;
+      clone.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          meshCount++;
+          const mesh = child as THREE.Mesh;
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          mats.forEach((mat) => {
+            if (mat) {
+              mat.side = THREE.DoubleSide;
+              mat.transparent = false;
+              mat.opacity = 1.0;
+              mat.visible = true;
+            }
+          });
+        }
+      });
+      console.log('Bumper model mesh count:', meshCount);
+
+      group.add(clone);
+
+      // Create fallback materials for flash effects
+      baseMat = materials.plastic(color);
+      emissiveMat = materials.emissive(color, 0);
+
+      // Use invisible meshes for flash tracking
+      const dummyGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.01, 4);
+      ringMesh = new THREE.Mesh(dummyGeo, baseMat);
+      ringMesh.visible = false;
+      capMesh = new THREE.Mesh(dummyGeo, emissiveMat);
+      capMesh.visible = false;
+      group.add(ringMesh);
+      group.add(capMesh);
+    } else {
+      // Fallback procedural geometry
+      const ringGeo = new THREE.CylinderGeometry(
+        BUMPER_RADIUS,
+        BUMPER_RADIUS,
+        BUMPER_HEIGHT,
+        24,
+      );
+      baseMat = materials.plastic(color);
+      ringMesh = new THREE.Mesh(ringGeo, baseMat);
+      ringMesh.position.set(0, BUMPER_HEIGHT / 2, 0);
+      ringMesh.castShadow = true;
+      group.add(ringMesh);
+
+      const capGeo = new THREE.CylinderGeometry(
+        BUMPER_RADIUS * 0.8,
+        BUMPER_RADIUS * 0.8,
+        0.05,
+        24,
+      );
+      emissiveMat = materials.emissive(color, 0);
+      capMesh = new THREE.Mesh(capGeo, emissiveMat);
+      capMesh.position.set(0, BUMPER_HEIGHT + 0.025, 0);
+      group.add(capMesh);
+    }
 
     // Physics body
     const body = createCylinderBody(world, BUMPER_RADIUS, BUMPER_HEIGHT / 2, {
       position: { x, y: BUMPER_HEIGHT / 2, z },
-      restitution: 1.2,
+      restitution: 0.3,
       friction: 0.1,
     });
 
-    // Create a group to hold both meshes
-    const group = new THREE.Group();
-    scene.remove(ringMesh);
-    scene.remove(capMesh);
-    group.add(ringMesh);
-    group.add(capMesh);
-    ringMesh.position.set(0, BUMPER_HEIGHT / 2, 0);
-    capMesh.position.set(0, BUMPER_HEIGHT + 0.025, 0);
     group.position.set(x, 0, z);
     scene.add(group);
 

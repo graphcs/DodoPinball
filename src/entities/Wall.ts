@@ -46,8 +46,8 @@ export class Wall extends Entity {
       halfExtents.y,
       halfExtents.z,
     )
-      .setRestitution(0.3)
-      .setFriction(0.5)
+      .setRestitution(0.7)
+      .setFriction(0.3)
       .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
     if (isSensor) {

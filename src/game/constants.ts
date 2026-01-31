@@ -1,7 +1,7 @@
 // ---- Table Dimensions ----
-export const TABLE_WIDTH = 5.0;
-export const TABLE_LENGTH = 10.0;
-export const TABLE_TILT_DEGREES = 6.5;
+export const TABLE_WIDTH = 6.0;
+export const TABLE_LENGTH = 12.0;
+export const TABLE_TILT_DEGREES = 15;
 export const WALL_HEIGHT = 0.6;
 export const WALL_THICKNESS = 0.15;
 export const PLAYFIELD_THICKNESS = 0.2;
@@ -11,11 +11,11 @@ export const BALL_RADIUS = 0.13;
 export const BALL_MASS = 0.08;
 export const BALL_RESTITUTION = 0.4;
 export const BALL_FRICTION = 0.2;
-export const BALL_LINEAR_DAMPING = 0.3;
+export const BALL_LINEAR_DAMPING = 0.05;
 export const BALL_ANGULAR_DAMPING = 0.1;
 
 // ---- Flippers ----
-export const FLIPPER_LENGTH = 0.8;
+export const FLIPPER_LENGTH = 1.1;
 export const FLIPPER_WIDTH = 0.15;
 export const FLIPPER_HEIGHT = 0.15;
 export const FLIPPER_REST_ANGLE = -0.45; // radians from center
@@ -26,14 +26,14 @@ export const FLIPPER_Y = 0.1;
 // ---- Plunger ----
 export const PLUNGER_MAX_PULL = 0.8;
 export const PLUNGER_CHARGE_SPEED = 2.5;
-export const PLUNGER_LAUNCH_SPEED = 18; // max ball speed in -Z (m/s)
+export const PLUNGER_LAUNCH_SPEED = 15; // max ball speed in -Z (m/s)
 export const PLUNGER_WIDTH = 0.2;
 export const PLUNGER_HEIGHT = 0.5;
 
 // ---- Bumpers ----
 export const BUMPER_RADIUS = 0.25;
 export const BUMPER_HEIGHT = 0.3;
-export const BUMPER_IMPULSE = 5.0;
+export const BUMPER_IMPULSE = 0.5;
 export const BUMPER_SCORE = 100;
 
 // ---- Slingshots ----
@@ -79,5 +79,5 @@ export const TABLE_GRAVITY = {
 };
 
 // ---- Launch Lane ----
-export const LAUNCH_LANE_X = TABLE_WIDTH / 2 - 0.35;
+export const LAUNCH_LANE_X = TABLE_WIDTH / 2 - 0.4;
 export const LAUNCH_LANE_WIDTH = 0.5;

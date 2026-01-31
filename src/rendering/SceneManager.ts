@@ -16,7 +16,7 @@ export class SceneManager {
       100
     );
     // Position camera above and slightly in front of the table looking down
-    this.camera.position.set(0, 12, 8);
+    this.camera.position.set(0, 16, 10);
     this.camera.lookAt(0, 0, -1);
 
     this.renderer = new THREE.WebGLRenderer({

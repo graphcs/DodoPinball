@@ -23,16 +23,6 @@ export const TableLayout = {
     { pos: { x: -HW / 2 - 0.5, y: 0.3, z: HL }, half: { x: HW / 2 - 0.5, y: 0.3, z: 0.075 } },
     { pos: { x: HW / 2 + 0.5, y: 0.3, z: HL }, half: { x: HW / 2 - 0.5, y: 0.3, z: 0.075 } },
 
-    // Launch lane walls - extend from near top to bottom of table
-    { pos: { x: LAUNCH_LANE_X - LAUNCH_LANE_WIDTH / 2, y: 0.3, z: 0.5 }, half: { x: 0.04, y: 0.3, z: 4.5 } },
-    { pos: { x: LAUNCH_LANE_X + LAUNCH_LANE_WIDTH / 2, y: 0.3, z: 0.5 }, half: { x: 0.04, y: 0.3, z: 4.5 } },
-
-    // Launch lane top curve guide (redirects ball left onto playfield)
-    { pos: { x: LAUNCH_LANE_X - 0.2, y: 0.3, z: -4.0 }, half: { x: 0.4, y: 0.3, z: 0.04 }, rot: -0.4 },
-
-    // Outlane guides (angled walls near bottom)
-    { pos: { x: -HW + 0.5, y: 0.3, z: HL - 1.2 }, half: { x: 0.5, y: 0.3, z: 0.04 }, rot: 0.5 },
-    { pos: { x: HW - 0.8, y: 0.3, z: HL - 1.2 }, half: { x: 0.5, y: 0.3, z: 0.04 }, rot: -0.5 },
   ],
 
   // Drain sensor (below bottom opening)
@@ -43,28 +33,28 @@ export const TableLayout = {
 
   // Flipper positions
   flippers: {
-    left: { x: -0.6, z: HL - 1.0 },
-    right: { x: 0.6, z: HL - 1.0 },
+    left: { x: -1.2, z: HL - 0.4 },
+    right: { x: 1.2, z: HL - 0.4 },
   },
 
   // Plunger position
   plunger: {
-    x: LAUNCH_LANE_X,
-    z: HL - 0.3,
+    x: LAUNCH_LANE_X - 0.1,
+    z: HL - 1.9,
   },
 
-  // Ball start (in launch lane, Y = ball radius above playfield surface)
+  // Ball start (in launch lane, Y above the launch path surface)
   ballStart: {
     x: LAUNCH_LANE_X,
-    y: 0.15,
-    z: HL - 0.8,
+    y: 0.2,
+    z: HL - 2.5,
   },
 
   // Bumper positions
   bumpers: [
-    { x: -0.6, z: -2.0, color: 0xff4400 },
-    { x: 0.6, z: -2.5, color: 0xff0044 },
-    { x: 0.0, z: -3.0, color: 0xff4400 },
+    { x: -0.6, z: -1.0, color: 0xff4400, score: 200 },
+    { x: 0.6, z: -0.2, color: 0xff0044, score: 400 },
+    { x: 0.0, z: -2.0, color: 0xff4400, score: 600 },
   ],
 
   // Slingshot vertices (triangular kickers above flippers)

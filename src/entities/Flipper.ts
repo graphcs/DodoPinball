@@ -26,38 +26,90 @@ export class Flipper extends Entity {
     pivotX: number,
     pivotZ: number,
     isLeft: boolean,
+    model?: THREE.Group,
   ) {
-    // Create flipper mesh - tapered shape
-    // Right flipper extends in -X (mirrored), left in +X
-    const dir = isLeft ? 1 : -1;
-    const shape = new THREE.Shape();
-    const hw = FLIPPER_WIDTH / 2;
-    const tipW = FLIPPER_WIDTH / 4;
+    let mesh: THREE.Object3D;
 
-    shape.moveTo(0, -hw);
-    shape.lineTo(dir * FLIPPER_LENGTH, -tipW);
-    shape.lineTo(dir * FLIPPER_LENGTH, tipW);
-    shape.lineTo(0, hw);
-    shape.closePath();
+    if (model) {
+      // Use the imported FBX model
+      const clone = model.clone();
 
-    const extrudeSettings = {
-      depth: FLIPPER_HEIGHT,
-      bevelEnabled: true,
-      bevelThickness: 0.02,
-      bevelSize: 0.02,
-      bevelSegments: 3,
-    };
+      // Compute bounding box to determine model's native size
+      const box = new THREE.Box3().setFromObject(clone);
+      const size = new THREE.Vector3();
+      box.getSize(size);
 
-    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    // Rotate so the flipper lies flat on the playfield
-    geometry.rotateX(-Math.PI / 2);
-    geometry.translate(0, FLIPPER_HEIGHT / 2, 0);
+      // Use uniform scale based on flipper length to preserve aspect ratio
+      // Mirror the right flipper on the X axis so the two face each other
+      const uniformScale = FLIPPER_LENGTH / (size.x || 1);
+      clone.scale.set(
+        uniformScale * (isLeft ? 1 : -1),
+        uniformScale,
+        uniformScale,
+      );
 
-    const material = materials.plastic(0xff2200);
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.castShadow = true;
-    mesh.position.set(pivotX, FLIPPER_Y, pivotZ);
-    scene.add(mesh);
+      // Recompute bounding box after scaling
+      const scaledBox = new THREE.Box3().setFromObject(clone);
+      const scaledCenter = new THREE.Vector3();
+      scaledBox.getCenter(scaledCenter);
+
+      // Position so the pivot end is at the origin:
+      // - Left flipper: min.x at origin, extends in +X
+      // - Right flipper: max.x at origin, extends in -X (mirrored)
+      if (isLeft) {
+        clone.position.x = -scaledBox.min.x;
+      } else {
+        clone.position.x = -scaledBox.max.x;
+      }
+      // Center vertically
+      clone.position.y = -scaledCenter.y + FLIPPER_HEIGHT / 2;
+      // Center along Z
+      clone.position.z = -scaledCenter.z;
+
+      clone.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          child.castShadow = true;
+        }
+      });
+
+      // Wrap in a group so the pivot is at group origin
+      const group = new THREE.Group();
+      group.add(clone);
+      group.position.set(pivotX, FLIPPER_Y, pivotZ);
+      scene.add(group);
+      mesh = group;
+    } else {
+      // Fallback: create flipper mesh - tapered shape
+      const dir = isLeft ? 1 : -1;
+      const shape = new THREE.Shape();
+      const hw = FLIPPER_WIDTH / 2;
+      const tipW = FLIPPER_WIDTH / 4;
+
+      shape.moveTo(0, -hw);
+      shape.lineTo(dir * FLIPPER_LENGTH, -tipW);
+      shape.lineTo(dir * FLIPPER_LENGTH, tipW);
+      shape.lineTo(0, hw);
+      shape.closePath();
+
+      const extrudeSettings = {
+        depth: FLIPPER_HEIGHT,
+        bevelEnabled: true,
+        bevelThickness: 0.02,
+        bevelSize: 0.02,
+        bevelSegments: 3,
+      };
+
+      const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+      geometry.rotateX(-Math.PI / 2);
+      geometry.translate(0, FLIPPER_HEIGHT / 2, 0);
+
+      const material = materials.plastic(0xff2200);
+      const meshObj = new THREE.Mesh(geometry, material);
+      meshObj.castShadow = true;
+      meshObj.position.set(pivotX, FLIPPER_Y, pivotZ);
+      scene.add(meshObj);
+      mesh = meshObj;
+    }
 
     // Create kinematic body
     const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
@@ -65,6 +117,7 @@ export class Flipper extends Entity {
     const body = world.createRigidBody(bodyDesc);
 
     // Collider: approximate as box, offset so pivot is at the end
+    const dir = isLeft ? 1 : -1;
     const hx = FLIPPER_LENGTH / 2;
     const hy = FLIPPER_HEIGHT / 2;
     const hz = FLIPPER_WIDTH / 2;

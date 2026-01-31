@@ -2,7 +2,6 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { GameEvents } from '../game/GameEvents';
 import { GameState } from '../game/GameState';
 import {
-  BUMPER_SCORE,
   SLINGSHOT_SCORE,
   DROP_TARGET_SCORE,
   DROP_TARGET_BANK_BONUS,
@@ -24,17 +23,24 @@ export const enum ColliderTag {
   Flipper = 9,
   Wall = 10,
   Plunger = 11,
+  TriangleBomper = 12,
+  Rocket = 13,
 }
 
 // Maps collider handles to tags and indices
 export class CollisionHandler {
   private colliderTags = new Map<number, { tag: ColliderTag; index: number }>();
   private ballHandle: number | null = null;
+  private bumperScores: number[] = [200, 400, 600];
 
   constructor(
     private events: GameEvents,
     private state: GameState,
   ) {}
+
+  setBumperScores(scores: number[]) {
+    this.bumperScores = scores;
+  }
 
   registerCollider(handle: number, tag: ColliderTag, index: number = 0) {
     this.colliderTags.set(handle, { tag, index });
@@ -76,7 +82,7 @@ export class CollisionHandler {
   ) {
     switch (other.tag) {
       case ColliderTag.Bumper:
-        this.state.addScore(BUMPER_SCORE);
+        this.state.addScore(this.bumperScores[other.index] ?? 200);
         this.events.emit('bumperHit', { index: other.index });
         break;
       case ColliderTag.Slingshot:
@@ -110,6 +116,14 @@ export class CollisionHandler {
         break;
       case ColliderTag.Drain:
         this.state.drainBall();
+        break;
+      case ColliderTag.TriangleBomper:
+        this.state.addScore(300);
+        this.events.emit('triangleBomperHit', { index: other.index });
+        break;
+      case ColliderTag.Rocket:
+        this.state.addScore(500);
+        this.events.emit('rocketHit', { index: other.index });
         break;
     }
   }
