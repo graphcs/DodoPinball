@@ -275,7 +275,7 @@ async function main() {
     scaledRBox.getCenter(scaledRCenter);
 
     // Center the model at the group origin
-    rocket.position.set(-scaledRCenter.x + 0.1, -scaledRCenter.y + 1.2, -scaledRCenter.z);
+    rocket.position.set(-scaledRCenter.x + 0.06, -scaledRCenter.y + 1.2, -scaledRCenter.z);
 
     // Wrap in a group for orbit animation
     rocketGroup = new THREE.Group();
@@ -340,7 +340,9 @@ async function main() {
     // Rotate cones: tip along -Z, then flip 180 on Z
     outerFlame.rotation.set(Math.PI / 2, 0, Math.PI);
     innerFlame.rotation.set(Math.PI / 2, 0, Math.PI);
+    innerFlame.position.z = 0.13;
     coreFlame.rotation.set(Math.PI / 2, 0, Math.PI);
+    coreFlame.position.z = 0.1;
 
     sceneManager.scene.add(flameGroup);
 

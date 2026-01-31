@@ -91,6 +91,7 @@ html, body {
 #overlay .screen {
   text-align: center;
   color: #fff;
+  margin-top: -80px;
 }
 
 #overlay .screen h1 {
@@ -114,6 +115,7 @@ html, body {
   line-height: 2;
   color: #ccc;
   margin-bottom: 30px;
+  margin-top: -40px;
 }
 
 #overlay .screen .controls kbd {

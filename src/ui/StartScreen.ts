@@ -9,13 +9,11 @@ export class StartScreen {
     this.overlay.className = 'active';
     this.overlay.innerHTML = `
       <div class="screen">
-        <h1>DODO'S<br><span style="font-size: 42px;">COSMIC PINBALL</span></h1>
-        <h2>A SPACE CITY ADVENTURE</h2>
+        <img src="/assets/UI/Logo.png" alt="Dodo's Cosmic Pinball" style="max-width: 400px; width: 80%; margin-bottom: 20px; margin-top: 30px;" />
         <div class="controls">
           <kbd>Z</kbd> Left Flipper &nbsp;&nbsp; <kbd>/</kbd> Right Flipper<br>
           Hold <kbd>Space</kbd> to charge plunger, release to launch<br>
-          <br>
-          <em>Mobile: Tap left/right for flippers, bottom for plunger</em>
+          <em style="display: inline-block; margin-top: 5px;">Mobile: Tap left/right for flippers, bottom for plunger</em>
         </div>
         <div class="prompt">Press ENTER to start</div>
       </div>
