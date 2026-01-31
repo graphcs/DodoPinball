@@ -5,6 +5,9 @@
 export class AudioManager {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private bgMusic: HTMLAudioElement | null = null;
+  private powerUpSound: HTMLAudioElement | null = null;
+  private bassyHitSound: HTMLAudioElement | null = null;
 
   constructor() {
     // Audio context created on first user interaction
@@ -22,6 +25,66 @@ export class AudioManager {
     window.addEventListener('click', initAudio);
     window.addEventListener('keydown', initAudio);
     window.addEventListener('touchstart', initAudio);
+
+    // Set up background music
+    this.bgMusic = new Audio('/assets/sounds/Free Copyright Music  RFM - NCM  No Copyright  Day After Day - Capturez  8 bit Music.mp3');
+    this.bgMusic.loop = true;
+    this.bgMusic.volume = 0.15;
+
+    // Power up sound for plunger charging
+    this.powerUpSound = new Audio('/assets/sounds/Power Up.mp3');
+    this.powerUpSound.volume = 0.3;
+
+    // Bassy hit sound for ball collisions
+    this.bassyHitSound = new Audio('/assets/sounds/Bassy Hit.mp3');
+    this.bassyHitSound.volume = 0.4;
+  }
+
+  startBgMusic() {
+    if (this.bgMusic) {
+      this.bgMusic.play().catch(() => {
+        // Autoplay blocked - will start on next user interaction
+        const startOnInteraction = () => {
+          this.bgMusic?.play();
+          window.removeEventListener('click', startOnInteraction);
+          window.removeEventListener('keydown', startOnInteraction);
+          window.removeEventListener('touchstart', startOnInteraction);
+        };
+        window.addEventListener('click', startOnInteraction);
+        window.addEventListener('keydown', startOnInteraction);
+        window.addEventListener('touchstart', startOnInteraction);
+      });
+    }
+  }
+
+  stopBgMusic() {
+    if (this.bgMusic) {
+      this.bgMusic.pause();
+      this.bgMusic.currentTime = 0;
+    }
+  }
+
+  playPowerUp() {
+    if (this.powerUpSound) {
+      this.powerUpSound.currentTime = 0;
+      this.powerUpSound.play().catch(() => {});
+    }
+  }
+
+  stopPowerUp() {
+    if (this.powerUpSound) {
+      this.powerUpSound.pause();
+      this.powerUpSound.currentTime = 0;
+    }
+  }
+
+  playBassyHit() {
+    if (this.bassyHitSound) {
+      // Clone to allow overlapping hits
+      const clone = this.bassyHitSound.cloneNode() as HTMLAudioElement;
+      clone.volume = this.bassyHitSound.volume;
+      clone.play().catch(() => {});
+    }
   }
 
   private ensureContext(): boolean {

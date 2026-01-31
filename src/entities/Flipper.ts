@@ -123,7 +123,7 @@ export class Flipper extends Entity {
     const hz = FLIPPER_WIDTH / 2;
     const colliderDesc = RAPIER.ColliderDesc.cuboid(hx, hy, hz)
       .setTranslation(dir * hx, 0, 0) // Left: +X offset, Right: -X offset
-      .setRestitution(0.3)
+      .setRestitution(0.2)
       .setFriction(0.5)
       .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
     world.createCollider(colliderDesc, body);

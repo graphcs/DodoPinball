@@ -13,7 +13,12 @@ export class Ball extends Entity {
     position: { x: number; y: number; z: number },
   ) {
     const geometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
-    const material = materials.chrome();
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x3a8a9a,
+      metalness: 0.6,
+      roughness: 0.25,
+      envMapIntensity: 1.0,
+    });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.castShadow = true;
     mesh.receiveShadow = true;

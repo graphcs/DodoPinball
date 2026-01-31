@@ -25,6 +25,7 @@ export const enum ColliderTag {
   Plunger = 11,
   TriangleBomper = 12,
   Rocket = 13,
+  Arch = 14,
 }
 
 // Maps collider handles to tags and indices
@@ -124,6 +125,10 @@ export class CollisionHandler {
       case ColliderTag.Rocket:
         this.state.addScore(500);
         this.events.emit('rocketHit', { index: other.index });
+        break;
+      case ColliderTag.Arch:
+        this.state.addScore(100);
+        this.events.emit('archHit', { index: other.index });
         break;
     }
   }

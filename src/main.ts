@@ -113,6 +113,30 @@ async function main() {
   } catch (e) {
     console.warn('Failed to load Rocket model:', e);
   }
+  let slideModel: THREE.Group | undefined;
+  try {
+    slideModel = await fbxLoader.loadAsync('/assets/models/Slide.fbx?v=' + Date.now());
+  } catch (e) {
+    console.warn('Failed to load Slide model:', e);
+  }
+  let slidePillarsModel: THREE.Group | undefined;
+  try {
+    slidePillarsModel = await fbxLoader.loadAsync('/assets/models/Slide pillars.fbx?v=' + Date.now());
+  } catch (e) {
+    console.warn('Failed to load Slide pillars model:', e);
+  }
+  let archsModel: THREE.Group | undefined;
+  try {
+    archsModel = await fbxLoader.loadAsync('/assets/models/Archs.fbx?v=reload_' + Date.now());
+  } catch (e) {
+    console.warn('Failed to load Archs model:', e);
+  }
+  let plungerModel: THREE.Group | undefined;
+  try {
+    plungerModel = await fbxLoader.loadAsync('/assets/models/Plunger.fbx?v=' + Date.now());
+  } catch (e) {
+    console.warn('Failed to load Plunger model:', e);
+  }
 
   // ---- Build Table ----
   const table = buildTable(
@@ -127,6 +151,7 @@ async function main() {
     buildingsModel,
     bumperModels,
     triangleBomperModel,
+    plungerModel,
   );
 
   // ---- Dodo Astronaut ----
@@ -193,9 +218,9 @@ async function main() {
     const HL = TABLE_LENGTH / 2;
     dodoBaseY = -scaledBox.min.y + 0.5;
     dodoAstronaut.position.set(
-      -scaledCenter.x,
+      -scaledCenter.x + 0.5,
       dodoBaseY,
-      -scaledCenter.z - HL + 1.5,
+      -scaledCenter.z - 2.5,
     );
     sceneManager.scene.add(dodoAstronaut);
   }
@@ -213,6 +238,14 @@ async function main() {
           if (mat) {
             mat.side = THREE.DoubleSide;
             mat.visible = true;
+            // Lighten red/dark pink materials
+            const stdMat = mat as any;
+            if (stdMat.color) {
+              const c = stdMat.color;
+              if (c.r > 0.3 && c.g < 0.3 && c.b < 0.4) {
+                c.lerp(new THREE.Color(1, 0.7, 0.7), 0.55);
+              }
+            }
           }
         });
       }
@@ -225,9 +258,9 @@ async function main() {
     const rCenter = new THREE.Vector3();
     rBox.getCenter(rCenter);
 
-    // Scale to ~2.16 units tall
+    // Scale to ~2.376 units tall
     const maxDim = Math.max(rSize.x, rSize.y, rSize.z);
-    const rScale = 2.16 / (maxDim || 1);
+    const rScale = 2.6136 / (maxDim || 1);
     rocket.scale.setScalar(rScale);
 
     // Recompute after scaling
@@ -235,12 +268,12 @@ async function main() {
     const scaledRCenter = new THREE.Vector3();
     scaledRBox.getCenter(scaledRCenter);
 
-    // Position on the right side of the table, mid-field
+    // Position on the left side of the table, upper area
     const HL = TABLE_LENGTH / 2;
     rocket.position.set(
-      -scaledRCenter.x + 1.5,
+      -scaledRCenter.x - 0.8,
       -scaledRBox.min.y,
-      -scaledRCenter.z - 1.5,
+      -scaledRCenter.z - 2.5,
     );
     sceneManager.scene.add(rocket);
 
@@ -294,6 +327,290 @@ async function main() {
     }
   }
 
+  // ---- Slide (with trimesh collider for ball to run on) ----
+  if (slideModel) {
+    const slide = slideModel.clone();
+    slide.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        mats.forEach((mat) => {
+          if (mat) {
+            mat.side = THREE.DoubleSide;
+            mat.visible = true;
+          }
+        });
+      }
+    });
+
+    const sBox = new THREE.Box3().setFromObject(slide);
+    const sSize = new THREE.Vector3();
+    sBox.getSize(sSize);
+    const sCenter = new THREE.Vector3();
+    sBox.getCenter(sCenter);
+
+    const maxDim = Math.max(sSize.x, sSize.y, sSize.z);
+    const sScale = (TABLE_LENGTH * 0.7) / (maxDim || 1);
+    slide.scale.setScalar(sScale);
+
+    const scaledSBox = new THREE.Box3().setFromObject(slide);
+    const scaledSCenter = new THREE.Vector3();
+    scaledSBox.getCenter(scaledSCenter);
+
+    // Position on the table and tilt the back end up
+    slide.position.set(
+      -scaledSCenter.x - 0.5,
+      -scaledSBox.min.y + 0.15,
+      -scaledSCenter.z - 1.3,
+    );
+    // Rotate slightly around X axis to tilt the back (top) end up
+    slide.rotation.x = 0.18;
+    sceneManager.scene.add(slide);
+
+    // Add trimesh collider so ball can run on the slide
+    slide.updateMatrixWorld(true);
+
+    const sVertices: number[] = [];
+    const sIndices: number[] = [];
+    let sVertexOffset = 0;
+
+    slide.traverse((child) => {
+      if (!(child as THREE.Mesh).isMesh) return;
+      const mesh = child as THREE.Mesh;
+      const geo = mesh.geometry;
+      const posAttr = geo.getAttribute('position');
+      if (!posAttr) return;
+
+      const vertex = new THREE.Vector3();
+      for (let i = 0; i < posAttr.count; i++) {
+        vertex.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+        mesh.localToWorld(vertex);
+        sVertices.push(vertex.x, vertex.y, vertex.z);
+      }
+
+      if (geo.index) {
+        for (let i = 0; i < geo.index.count; i++) {
+          sIndices.push(geo.index.array[i] + sVertexOffset);
+        }
+      } else {
+        for (let i = 0; i < posAttr.count; i++) {
+          sIndices.push(i + sVertexOffset);
+        }
+      }
+
+      sVertexOffset += posAttr.count;
+    });
+
+    if (sVertices.length > 0 && sIndices.length > 0) {
+      // Make trimesh double-sided by adding reverse-winding triangles
+      const doubleIndices: number[] = [...sIndices];
+      for (let i = 0; i < sIndices.length; i += 3) {
+        doubleIndices.push(sIndices[i], sIndices[i + 2], sIndices[i + 1]);
+      }
+
+      const vertices = new Float32Array(sVertices);
+      const indices = new Uint32Array(doubleIndices);
+
+      const sBodyDesc = RAPIER.RigidBodyDesc.fixed();
+      const sBody = physicsWorld.world.createRigidBody(sBodyDesc);
+
+      const trimeshDesc = RAPIER.ColliderDesc.trimesh(vertices, indices)
+        .setRestitution(0.3)
+        .setFriction(0.5);
+      physicsWorld.world.createCollider(trimeshDesc, sBody);
+    }
+  }
+
+  // ---- Slide Pillars ----
+  if (slidePillarsModel) {
+    const pillars = slidePillarsModel.clone();
+    pillars.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        mats.forEach((mat) => {
+          if (mat) {
+            mat.side = THREE.DoubleSide;
+            mat.visible = true;
+          }
+        });
+      }
+    });
+
+    const pBox = new THREE.Box3().setFromObject(pillars);
+    const pSize = new THREE.Vector3();
+    pBox.getSize(pSize);
+    const pCenter = new THREE.Vector3();
+    pBox.getCenter(pCenter);
+
+    const maxDim = Math.max(pSize.x, pSize.y, pSize.z);
+    const pScale = TABLE_LENGTH / (maxDim || 1);
+    pillars.scale.setScalar(pScale);
+
+    const scaledPBox = new THREE.Box3().setFromObject(pillars);
+    const scaledPCenter = new THREE.Vector3();
+    scaledPBox.getCenter(scaledPCenter);
+
+    pillars.position.set(
+      -scaledPCenter.x + 1.5,
+      -scaledPBox.min.y,
+      -scaledPCenter.z,
+    );
+    sceneManager.scene.add(pillars);
+  }
+
+  // ---- Archs ----
+  let archLight: THREE.PointLight | null = null;
+  if (archsModel) {
+    const archs = archsModel.clone();
+    archs.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        mats.forEach((mat) => {
+          if (mat) {
+            mat.side = THREE.DoubleSide;
+            mat.visible = true;
+            // Lighten red/dark pink materials
+            if ('color' in mat) {
+              const c = (mat as THREE.MeshStandardMaterial).color;
+              if (c && c.r > 0.3 && c.g < 0.3 && c.b < 0.3) {
+                c.lerp(new THREE.Color(1, 0.7, 0.7), 0.15);
+              }
+            }
+          }
+        });
+      }
+    });
+
+    const aBox = new THREE.Box3().setFromObject(archs);
+    const aSize = new THREE.Vector3();
+    aBox.getSize(aSize);
+    const aCenter = new THREE.Vector3();
+    aBox.getCenter(aCenter);
+
+    const maxDim = Math.max(aSize.x, aSize.y, aSize.z);
+    const aScale = (TABLE_LENGTH * 0.402) / (maxDim || 1);
+    archs.scale.setScalar(aScale);
+
+    const scaledABox = new THREE.Box3().setFromObject(archs);
+    const scaledACenter = new THREE.Vector3();
+    scaledABox.getCenter(scaledACenter);
+
+    archs.position.set(
+      -scaledACenter.x - 0.2,
+      -scaledABox.min.y,
+      -scaledACenter.z,
+    );
+    sceneManager.scene.add(archs);
+
+    // Add hit light to the archs
+    archLight = new THREE.PointLight(0xe78299, 0, 4);
+    archLight.position.set(archs.position.x, 1.0, archs.position.z);
+    sceneManager.scene.add(archLight);
+
+    // Add trimesh collider for the archs
+    archs.updateMatrixWorld(true);
+
+    const aVertices: number[] = [];
+    const aIndices: number[] = [];
+    let aVertexOffset = 0;
+
+    archs.traverse((child) => {
+      if (!(child as THREE.Mesh).isMesh) return;
+      const mesh = child as THREE.Mesh;
+      const geo = mesh.geometry;
+      const posAttr = geo.getAttribute('position');
+      if (!posAttr) return;
+
+      const vertex = new THREE.Vector3();
+      for (let i = 0; i < posAttr.count; i++) {
+        vertex.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+        mesh.localToWorld(vertex);
+        aVertices.push(vertex.x, vertex.y, vertex.z);
+      }
+
+      if (geo.index) {
+        for (let i = 0; i < geo.index.count; i++) {
+          aIndices.push(geo.index.array[i] + aVertexOffset);
+        }
+      } else {
+        for (let i = 0; i < posAttr.count; i++) {
+          aIndices.push(i + aVertexOffset);
+        }
+      }
+
+      aVertexOffset += posAttr.count;
+    });
+
+    if (aVertices.length > 0 && aIndices.length > 0) {
+      const vertices = new Float32Array(aVertices);
+      const indices = new Uint32Array(aIndices);
+
+      const aBodyDesc = RAPIER.RigidBodyDesc.fixed();
+      const aBody = physicsWorld.world.createRigidBody(aBodyDesc);
+
+      const trimeshDesc = RAPIER.ColliderDesc.trimesh(vertices, indices)
+        .setRestitution(0.8)
+        .setFriction(0.1)
+        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+      const aCollider = physicsWorld.world.createCollider(trimeshDesc, aBody);
+      collisionHandler.registerCollider(aCollider.handle, ColliderTag.Arch, 0);
+    }
+  }
+
+  // ---- Decorative Planets near playfield ----
+  const planetConfigs: { pos: number[]; radius: number; color: number; emissive: number; ring?: { color: number; tilt: number } }[] = [
+    { pos: [-6, 4, -8], radius: 1.8, color: 0x4a3020, emissive: 0x1a0800 },   // brown gas giant
+    { pos: [7, 6, -12], radius: 2.5, color: 0x2a3850, emissive: 0x080c18 },    // blue ice planet
+    { pos: [-15, 1, -10], radius: 1.2, color: 0x502060, emissive: 0x100810 },    // purple
+    { pos: [5, 3, 5], radius: 0.8, color: 0x604838, emissive: 0x181008 },       // small rocky
+    { pos: [-4, 10, -20], radius: 3.5, color: 0x3a4555, emissive: 0x0a0c12, ring: { color: 0x6a7a90, tilt: 0.3 } },   // large distant
+  ];
+  planetConfigs.forEach((cfg) => {
+    const geo = new THREE.SphereGeometry(cfg.radius, 32, 24);
+    const mat = new THREE.MeshStandardMaterial({
+      color: cfg.color,
+      emissive: cfg.emissive,
+      roughness: 0.8,
+      metalness: 0.1,
+    });
+    const planet = new THREE.Mesh(geo, mat);
+    planet.position.set(cfg.pos[0], cfg.pos[1], cfg.pos[2]);
+    sceneManager.scene.add(planet);
+
+    // Atmospheric glow
+    const glowGeo = new THREE.SphereGeometry(cfg.radius * 1.15, 32, 24);
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: cfg.color,
+      transparent: true,
+      opacity: 0.08,
+      side: THREE.BackSide,
+    });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    planet.add(glow);
+
+    // Small thin ring
+    if (cfg.ring) {
+      const ringGeo = new THREE.RingGeometry(cfg.radius * 1.3, cfg.radius * 1.5, 64);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: cfg.ring.color,
+        transparent: true,
+        opacity: 0.2,
+        side: THREE.DoubleSide,
+      });
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.rotation.x = Math.PI / 2 + cfg.ring.tilt;
+      planet.add(ringMesh);
+    }
+  });
+
   // ---- Input ----
   const input = new InputManager();
   input.setupTouch(canvas);
@@ -330,11 +647,14 @@ async function main() {
             table.ball.reset(TableLayout.ballStart);
           }
           table.plunger.startCharge();
+          audio.playPowerUp();
         } else {
           table.plunger.release();
+          audio.stopPowerUp();
+          audio.playBassyHit();
+          audio.playPlungerRelease();
           if (!state.isBallInPlay && state.isPlaying) {
             state.launchBall();
-            audio.playPlungerRelease();
           }
         }
         break;
@@ -427,9 +747,9 @@ async function main() {
     // Apply bounce impulse away from rocket
     if (table.ball.body) {
       const ballPos = table.ball.body.translation();
-      // Rocket is at x:1.5, z:-1.5 — push ball away from it
-      const rocketX = 1.5;
-      const rocketZ = -1.5;
+      // Rocket is at x:-1.5, z:-3.0 — push ball away from it
+      const rocketX = -0.8;
+      const rocketZ = -2.5;
       const dx = ballPos.x - rocketX;
       const dz = ballPos.z - rocketZ;
       const len = Math.sqrt(dx * dx + dz * dz) || 1;
@@ -442,6 +762,49 @@ async function main() {
     }
 
     shakeIntensity = 0.04;
+  });
+
+  events.on('archHit', () => {
+    audio.playBumperHit();
+
+    // Flash the arch light
+    if (archLight) {
+      archLight.intensity = 3;
+      const fadeArch = () => {
+        archLight.intensity *= 0.85;
+        if (archLight.intensity > 0.05) {
+          requestAnimationFrame(fadeArch);
+        } else {
+          archLight.intensity = 0;
+        }
+      };
+      requestAnimationFrame(fadeArch);
+    }
+
+    // Apply bounce impulse away from the arch center toward the table center
+    if (table.ball.body) {
+      const ballPos = table.ball.body.translation();
+      const vel = table.ball.body.linvel();
+      const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+      const pushX = ballPos.x > 0 ? -1 : 1;
+      const ARCH_BOUNCE = 1.2;
+
+      if (speed < 0.5) {
+        // Ball is stuck - push it away firmly toward center and down
+        table.ball.body.setLinvel(
+          new RAPIER.Vector3(pushX * ARCH_BOUNCE, 0.1, ARCH_BOUNCE * 0.6),
+          true,
+        );
+      } else {
+        table.ball.applyImpulse({
+          x: pushX * ARCH_BOUNCE * 0.4,
+          y: 0,
+          z: ARCH_BOUNCE * 0.4,
+        });
+      }
+    }
+
+    shakeIntensity = 0.03;
   });
 
   events.on('slingshotHit', (e) => {
@@ -532,7 +895,15 @@ async function main() {
   });
 
   // ---- Game Loop ----
+  const preLaunchCameraPos = new THREE.Vector3(0, 7, 14);
+  const preLaunchLookAt = new THREE.Vector3(0, 0, -3);
+  // Follow camera: more top-down, offset behind/above ball
+  const followCameraOffset = new THREE.Vector3(0, 16, 6);
+  const followLookAtOffset = new THREE.Vector3(0, 0, -2);
+  const currentCameraPos = sceneManager.camera.position.clone();
+  const currentLookAt = preLaunchLookAt.clone();
   const baseCameraPos = sceneManager.camera.position.clone();
+  const lerpSpeed = 0.015;
 
   const gameLoop = new GameLoop(
     // Physics step
@@ -570,6 +941,15 @@ async function main() {
           );
         }
 
+        // Unstick ball trapped under the slide
+        const inSlideZone = pos.x > -2.0 && pos.x < 1.0 && pos.z > -3.0 && pos.z < 1.0 && pos.y < 0.25;
+        if (inSlideZone && speed < 1.5 && state.isBallInPlay) {
+          table.ball.body.setLinvel(
+            new RAPIER.Vector3(2.5, 0.5, 2.0),
+            true,
+          );
+        }
+
       }
     },
     // Render
@@ -587,16 +967,44 @@ async function main() {
       }
       particleSystem.update(1 / 60);
 
+      // Camera follow logic
+      let targetCameraPos: THREE.Vector3;
+      let targetLookAt: THREE.Vector3;
+
+      if (state.isBallInPlay && table.ball.body) {
+        const ballPos = table.ball.body.translation();
+        // Clamp ball Z to keep camera within reasonable bounds
+        const clampedZ = Math.max(-3, Math.min(3, ballPos.z));
+        targetCameraPos = new THREE.Vector3(
+          ballPos.x * 0.1,
+          followCameraOffset.y,
+          clampedZ * 0.4 + followCameraOffset.z,
+        );
+        targetLookAt = new THREE.Vector3(
+          ballPos.x * 0.08,
+          0,
+          clampedZ * 0.4 + followLookAtOffset.z,
+        );
+      } else {
+        targetCameraPos = preLaunchCameraPos;
+        targetLookAt = preLaunchLookAt;
+      }
+
+      currentCameraPos.lerp(targetCameraPos, lerpSpeed);
+      currentLookAt.lerp(targetLookAt, lerpSpeed);
+      baseCameraPos.copy(currentCameraPos);
+
+      sceneManager.camera.position.copy(currentCameraPos);
+      sceneManager.camera.lookAt(currentLookAt);
+
       // Camera shake
       if (shakeIntensity > 0.001) {
         shakeIntensity *= Math.exp(-shakeDecay * (1 / 60));
         sceneManager.camera.position.set(
-          baseCameraPos.x + (Math.random() - 0.5) * shakeIntensity,
-          baseCameraPos.y + (Math.random() - 0.5) * shakeIntensity,
-          baseCameraPos.z + (Math.random() - 0.5) * shakeIntensity,
+          currentCameraPos.x + (Math.random() - 0.5) * shakeIntensity,
+          currentCameraPos.y + (Math.random() - 0.5) * shakeIntensity,
+          currentCameraPos.z + (Math.random() - 0.5) * shakeIntensity,
         );
-      } else {
-        sceneManager.camera.position.copy(baseCameraPos);
       }
 
       // Render with post-processing
@@ -611,6 +1019,7 @@ async function main() {
     table.ball.reset(TableLayout.ballStart);
     table.dropTargets.forEach((dt) => dt.resetTarget());
     table.rolloverLanes.forEach((rl) => rl.deactivate());
+    audio.startBgMusic();
   };
 
   const gameOverScreen = new GameOverScreen(startGame);

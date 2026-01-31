@@ -43,6 +43,7 @@ export function buildTable(
   buildingsModel?: THREE.Group,
   bumperModels?: (THREE.Group | undefined)[],
   triangleBomperModel?: THREE.Group,
+  plungerModel?: THREE.Group,
 ): TableEntities {
   const layout = TableLayout;
 
@@ -286,10 +287,32 @@ export function buildTable(
   const plunger = new Plunger(
     world, scene, materials,
     layout.plunger.x, layout.plunger.z,
+    plungerModel,
   );
+
+  // Add invisible wall behind the plunger to prevent ball from slipping past
+  const plungerWallBody = RAPIER.RigidBodyDesc.fixed()
+    .setTranslation(layout.plunger.x, 0.15, layout.plunger.z + 0.5);
+  const plungerWallRb = world.createRigidBody(plungerWallBody);
+  RAPIER.ColliderDesc.cuboid(0.3, 0.3, 0.05)
+    .setRestitution(0.5)
+    .setFriction(0.3);
+  const plungerWallCollider = RAPIER.ColliderDesc.cuboid(0.3, 0.3, 0.05)
+    .setRestitution(0.5)
+    .setFriction(0.3);
+  world.createCollider(plungerWallCollider, plungerWallRb);
+
   plunger.setReleaseCallback((speed) => {
     // Set ball velocity directly for reliable launch
     if (ball.body) {
+      const ballPos = ball.body.translation();
+      // If ball is behind or at the plunger, move it in front first
+      if (ballPos.z >= layout.plunger.z - 0.3) {
+        ball.body.setTranslation(
+          new RAPIER.Vector3(layout.ballStart.x, layout.ballStart.y, layout.plunger.z - 0.5),
+          true,
+        );
+      }
       ball.body.setLinvel(new RAPIER.Vector3(0, 0.3, -speed), true);
     }
   });
@@ -348,7 +371,7 @@ export function buildTable(
     tb.position.set(
       -scaledTbCenter.x,
       -scaledTbBox.min.y,
-      -scaledTbCenter.z + HL - 3.5,
+      -scaledTbCenter.z + HL - 3.0,
     );
     scene.add(tb);
 
@@ -566,10 +589,33 @@ function addTableDecorations(scene: THREE.Scene, materials: Materials) {
   // Table art dots (decorative circles on playfield)
   const dotGeo = new THREE.CircleGeometry(0.05, 16);
   const dotMat = materials.emissive(0xffd700, 0.5);
+  const HL = TABLE_LENGTH / 2;
+  const HW = TABLE_WIDTH / 2;
   const dotPositions = [
+    // Middle area (existing)
     [-1.0, -1.5], [1.0, -1.5],
     [-1.5, 0.0], [1.5, 0.0],
     [-0.3, -3.5], [0.3, -3.5],
+    // Front left wall
+    [-HW + 0.8, HL - 2.0],
+    [-HW + 0.8, HL - 2.5],
+    [-HW + 0.8, HL - 3.0],
+    [-HW + 0.8, HL - 3.5],
+    [-HW + 0.8, HL - 4.0],
+    [-HW + 0.8, HL - 4.5],
+    // Front right wall
+    [HW - 0.8, HL - 2.0],
+    [HW - 0.8, HL - 2.5],
+    [HW - 0.8, HL - 3.0],
+    [HW - 0.8, HL - 3.5],
+    [HW - 0.8, HL - 4.0],
+    [HW - 0.8, HL - 4.5],
+    // Bottom wall left section
+    [-1.8, HL - 1.6],
+    [-1.4, HL - 1.3],
+    // Bottom wall right section
+    [1.8, HL - 1.6],
+    [1.4, HL - 1.3],
   ];
 
   for (const [x, z] of dotPositions) {

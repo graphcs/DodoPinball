@@ -14,6 +14,7 @@ export class Plunger extends Entity {
   private charge = 0;
   private isCharging = false;
   private restZ: number;
+  private meshBaseZ: number = 0;
   private onRelease: ((force: number) => void) | null = null;
 
   constructor(
@@ -22,19 +23,64 @@ export class Plunger extends Entity {
     materials: Materials,
     x: number,
     z: number,
+    model?: THREE.Group,
   ) {
-    // Plunger visual - a cylinder
-    const geometry = new THREE.CylinderGeometry(
-      PLUNGER_WIDTH / 2,
-      PLUNGER_WIDTH / 2,
-      PLUNGER_HEIGHT,
-      16,
-    );
-    const material = materials.rail();
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(x, 0.15, z);
-    mesh.castShadow = true;
-    scene.add(mesh);
+    let mesh: THREE.Object3D;
+
+    if (model) {
+      // Use the imported FBX model
+      const plungerGroup = model.clone();
+      plungerGroup.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const m = child as THREE.Mesh;
+          m.castShadow = true;
+          m.receiveShadow = true;
+          const mats = Array.isArray(m.material) ? m.material : [m.material];
+          mats.forEach((mat) => {
+            if (mat) {
+              mat.side = THREE.DoubleSide;
+              mat.visible = true;
+            }
+          });
+        }
+      });
+
+      // Scale to fit plunger size
+      const box = new THREE.Box3().setFromObject(plungerGroup);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = PLUNGER_HEIGHT / (maxDim || 1);
+      plungerGroup.scale.setScalar(scale);
+
+      // Recompute after scaling
+      const scaledBox = new THREE.Box3().setFromObject(plungerGroup);
+      const scaledCenter = new THREE.Vector3();
+      scaledBox.getCenter(scaledCenter);
+
+      plungerGroup.position.set(
+        x - scaledCenter.x,
+        -scaledBox.min.y + 0.15,
+        z - scaledCenter.z,
+      );
+
+      scene.add(plungerGroup);
+      mesh = plungerGroup;
+    } else {
+      // Fallback: a cylinder
+      const geometry = new THREE.CylinderGeometry(
+        PLUNGER_WIDTH / 2,
+        PLUNGER_WIDTH / 2,
+        PLUNGER_HEIGHT,
+        16,
+      );
+      const material = materials.rail();
+      const fallbackMesh = new THREE.Mesh(geometry, material);
+      fallbackMesh.position.set(x, 0.15, z);
+      fallbackMesh.castShadow = true;
+      scene.add(fallbackMesh);
+      mesh = fallbackMesh;
+    }
 
     // Plunger is kinematic - we move it manually
     const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
@@ -53,6 +99,7 @@ export class Plunger extends Entity {
 
     super(mesh, body);
     this.restZ = z;
+    this.meshBaseZ = mesh.position.z;
   }
 
   setReleaseCallback(cb: (force: number) => void) {
@@ -92,7 +139,7 @@ export class Plunger extends Entity {
       );
     }
 
-    this.mesh.position.z = targetZ;
+    this.mesh.position.z = this.meshBaseZ + pullBack;
   }
 
   getChargePercent(): number {

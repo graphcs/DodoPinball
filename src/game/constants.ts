@@ -20,15 +20,15 @@ export const FLIPPER_WIDTH = 0.15;
 export const FLIPPER_HEIGHT = 0.15;
 export const FLIPPER_REST_ANGLE = -0.45; // radians from center
 export const FLIPPER_MAX_ANGLE = 0.45;
-export const FLIPPER_SPEED = 25; // radians per second
+export const FLIPPER_SPEED = 18; // radians per second
 export const FLIPPER_Y = 0.1;
 
 // ---- Plunger ----
 export const PLUNGER_MAX_PULL = 0.8;
 export const PLUNGER_CHARGE_SPEED = 2.5;
 export const PLUNGER_LAUNCH_SPEED = 15; // max ball speed in -Z (m/s)
-export const PLUNGER_WIDTH = 0.2;
-export const PLUNGER_HEIGHT = 0.5;
+export const PLUNGER_WIDTH = 0.35;
+export const PLUNGER_HEIGHT = 0.6;
 
 // ---- Bumpers ----
 export const BUMPER_RADIUS = 0.25;

@@ -9,8 +9,8 @@ export class StartScreen {
     this.overlay.className = 'active';
     this.overlay.innerHTML = `
       <div class="screen">
-        <h1>3D PINBALL</h1>
-        <h2>SPACE CADET</h2>
+        <h1>DODO'S<br><span style="font-size: 42px;">COSMIC PINBALL</span></h1>
+        <h2>A SPACE CITY ADVENTURE</h2>
         <div class="controls">
           <kbd>Z</kbd> Left Flipper &nbsp;&nbsp; <kbd>/</kbd> Right Flipper<br>
           Hold <kbd>Space</kbd> to charge plunger, release to launch<br>
