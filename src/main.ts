@@ -963,7 +963,7 @@ async function main() {
       // Animate Dodo astronaut bobbing up and down
       if (dodoAstronaut) {
         const time = performance.now() / 1000;
-        dodoAstronaut.position.y = dodoBaseY + Math.sin(time * 0.8) * 0.15;
+        dodoAstronaut.position.y = dodoBaseY + Math.sin(time * 1.4) * 0.3;
       }
       particleSystem.update(1 / 60);
 
