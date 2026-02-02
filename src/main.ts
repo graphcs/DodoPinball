@@ -955,12 +955,23 @@ async function main() {
           }
         }
 
-        // Unstick ball near triangle bompers
+        // Clamp ball speed to prevent it flying off the playfield
         const vel = table.ball.body.linvel();
-        const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+        const speed = Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z);
+        const MAX_BALL_SPEED = 15;
+        if (speed > MAX_BALL_SPEED) {
+          const scale = MAX_BALL_SPEED / speed;
+          table.ball.body.setLinvel(
+            new RAPIER.Vector3(vel.x * scale, vel.y * scale, vel.z * scale),
+            true,
+          );
+        }
+
+        // Unstick ball near triangle bompers
+        const speed2d = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
         const HL = TABLE_LENGTH / 2;
         const inBomperZone = pos.z > (HL - 4.5) && pos.z < (HL - 2.0) && Math.abs(pos.x) > 0.5;
-        if (inBomperZone && speed < 0.3 && state.isBallInPlay) {
+        if (inBomperZone && speed2d < 0.3 && state.isBallInPlay) {
           // Ball is stuck near triangle bompers - kick it toward center and down
           const pushX = pos.x > 0 ? -1 : 1;
           table.ball.body.setLinvel(
@@ -971,7 +982,7 @@ async function main() {
 
         // Unstick ball trapped under the slide
         const inSlideZone = pos.x > -2.0 && pos.x < 1.0 && pos.z > -3.0 && pos.z < 1.0 && pos.y < 0.25;
-        if (inSlideZone && speed < 1.5 && state.isBallInPlay) {
+        if (inSlideZone && speed2d < 1.5 && state.isBallInPlay) {
           table.ball.body.setLinvel(
             new RAPIER.Vector3(2.5, 0.5, 2.0),
             true,
