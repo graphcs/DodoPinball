@@ -57,10 +57,18 @@ export class Bumper extends Entity {
           const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
           mats.forEach((mat) => {
             if (mat) {
+              const stdMat = mat as THREE.MeshStandardMaterial;
+              console.log('Bumper material:', mat.name, 'opacity:', mat.opacity, 'transparent:', mat.transparent, 'color:', stdMat.color?.getHexString());
+
               mat.side = THREE.DoubleSide;
-              mat.transparent = false;
-              mat.opacity = 1.0;
               mat.visible = true;
+
+              // Preserve transparency from the original material
+              // If opacity is less than 1 or material has alpha, enable transparency
+              if (mat.opacity < 1.0 || stdMat.alphaMap) {
+                mat.transparent = true;
+                mat.depthWrite = false; // Helps with transparent rendering order
+              }
             }
           });
         }

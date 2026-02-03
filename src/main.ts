@@ -169,13 +169,23 @@ async function main() {
 
         const convertMat = (mat: THREE.Material): THREE.Material => {
           const oldMat = mat as any;
+
+          // Check if original material has transparency
+          const hasTransparency = oldMat.opacity < 1.0 || oldMat.transparent || oldMat.alphaMap;
+
+          console.log('Dodo material:', mat.name, 'opacity:', oldMat.opacity, 'transparent:', oldMat.transparent, 'color:', oldMat.color?.getHexString());
+
           const newMat = new THREE.MeshStandardMaterial({
             color: 0xffffff,
             map: oldMat.map || null,
             normalMap: oldMat.normalMap || null,
+            alphaMap: oldMat.alphaMap || null,
             side: THREE.DoubleSide,
             metalness: 0.1,
             roughness: 0.6,
+            transparent: hasTransparency,
+            opacity: oldMat.opacity !== undefined ? oldMat.opacity : 1.0,
+            depthWrite: !hasTransparency, // Disable depth write for transparent materials
           });
           if (oldMat.map) {
             oldMat.map.colorSpace = THREE.SRGBColorSpace;
