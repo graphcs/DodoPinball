@@ -13,7 +13,10 @@ export type GameEventType =
   | 'multiplierChange'
   | 'extraBall'
   | 'gameOver'
-  | 'gameStart';
+  | 'gameStart'
+  | 'triangleBomperHit'
+  | 'rocketHit'
+  | 'archHit';
 
 export interface GameEvent {
   type: GameEventType;
