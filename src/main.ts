@@ -18,12 +18,24 @@ import { AudioManager } from './audio/AudioManager';
 import { HUD } from './ui/HUD';
 import { StartScreen } from './ui/StartScreen';
 import { GameOverScreen } from './ui/GameOverScreen';
+import { LoadingScreen } from './ui/LoadingScreen';
 import { buildTable, TableEntities } from './table/TableBuilder';
 import { TableLayout } from './table/TableLayout';
 
 async function main() {
+  // Show loading screen immediately
+  const loadingScreen = new LoadingScreen();
+  loadingScreen.show();
+  let loadProgress = 0;
+  const totalLoadSteps = 14; // Number of assets to load
+  const updateLoadProgress = () => {
+    loadProgress++;
+    loadingScreen.updateProgress((loadProgress / totalLoadSteps) * 100);
+  };
+
   // Initialize Rapier WASM
   await RAPIER.init();
+  updateLoadProgress();
 
   // ---- Rendering ----
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -70,21 +82,25 @@ async function main() {
   } catch (e) {
     console.warn('Failed to load flipper model, using fallback geometry:', e);
   }
+  updateLoadProgress();
   try {
     launchPathModel = await fbxLoader.loadAsync('/assets/models/Launch path.fbx?v=' + Date.now());
   } catch (e) {
     console.warn('Failed to load launch path model:', e);
   }
+  updateLoadProgress();
   try {
     playfieldModel = await fbxLoader.loadAsync('/assets/models/Play field base.fbx?v=r4_' + Date.now());
   } catch (e) {
     console.warn('Failed to load playfield model:', e);
   }
+  updateLoadProgress();
   try {
     buildingsModel = await fbxLoader.loadAsync('/assets/models/Buildings.fbx?v=reload_' + Date.now());
   } catch (e) {
     console.warn('Failed to load buildings model:', e);
   }
+  updateLoadProgress();
   const bumperFiles = ['200 bumper.fbx', '400 bumper.fbx', '600 bumper.fbx'];
   for (let i = 0; i < bumperFiles.length; i++) {
     try {
@@ -93,11 +109,13 @@ async function main() {
       console.warn('Failed to load bumper model ' + bumperFiles[i] + ':', e);
     }
   }
+  updateLoadProgress();
   try {
     triangleBomperModel = await fbxLoader.loadAsync('/assets/models/Triangle bomper.fbx?v=' + Date.now());
   } catch (e) {
     console.warn('Failed to load triangle bomper model:', e);
   }
+  updateLoadProgress();
   let dodoAstronautModel: THREE.Group | undefined;
   try {
     // Use a separate loader with resource path pointing to images folder
@@ -107,36 +125,42 @@ async function main() {
   } catch (e) {
     console.warn('Failed to load Dodo astronaut model:', e);
   }
+  updateLoadProgress();
   let rocketModel: THREE.Group | undefined;
   try {
     rocketModel = await fbxLoader.loadAsync('/assets/models/Rocket.fbx?v=' + Date.now());
   } catch (e) {
     console.warn('Failed to load Rocket model:', e);
   }
+  updateLoadProgress();
   let slideModel: THREE.Group | undefined;
   try {
-    slideModel = await fbxLoader.loadAsync('/assets/models/Slide.fbx?v=' + Date.now());
+    slideModel = await fbxLoader.loadAsync('/assets/models/Slide new.fbx?v=' + Date.now());
   } catch (e) {
     console.warn('Failed to load Slide model:', e);
   }
+  updateLoadProgress();
   let slidePillarsModel: THREE.Group | undefined;
   try {
     slidePillarsModel = await fbxLoader.loadAsync('/assets/models/Slide pillars.fbx?v=' + Date.now());
   } catch (e) {
     console.warn('Failed to load Slide pillars model:', e);
   }
+  updateLoadProgress();
   let archsModel: THREE.Group | undefined;
   try {
     archsModel = await fbxLoader.loadAsync('/assets/models/Archs.fbx?v=reload_' + Date.now());
   } catch (e) {
     console.warn('Failed to load Archs model:', e);
   }
+  updateLoadProgress();
   let plungerModel: THREE.Group | undefined;
   try {
     plungerModel = await fbxLoader.loadAsync('/assets/models/Plunger.fbx?v=' + Date.now());
   } catch (e) {
     console.warn('Failed to load Plunger model:', e);
   }
+  updateLoadProgress();
 
   // ---- Build Table ----
   const table = buildTable(
@@ -391,7 +415,7 @@ async function main() {
 
     const maxDim = Math.max(sSize.x, sSize.y, sSize.z);
     const sScale = (TABLE_LENGTH * 0.7) / (maxDim || 1);
-    slide.scale.setScalar(sScale * 0.98 * 0.98 * 0.96 * 0.96);
+    slide.scale.setScalar(sScale * 0.98 * 0.98 * 0.96 * 0.96 * 1.1 * 1.1);
 
     const scaledSBox = new THREE.Box3().setFromObject(slide);
     const scaledSCenter = new THREE.Vector3();
@@ -399,12 +423,12 @@ async function main() {
 
     // Position on the table and tilt the back end up
     slide.position.set(
-      -scaledSCenter.x - 0.7,
-      -scaledSBox.min.y + 0.15,
-      -scaledSCenter.z - 1.3,
+      -scaledSCenter.x - 0.4,
+      -scaledSBox.min.y,
+      -scaledSCenter.z - 0.5,
     );
     // Rotate slightly around X axis to tilt the back (top) end up
-    slide.rotation.x = 0.10;
+    slide.rotation.x = 0;
     sceneManager.scene.add(slide);
 
     // Add trimesh collider so ball can run on the slide
@@ -459,6 +483,17 @@ async function main() {
         .setFriction(0.5);
       physicsWorld.world.createCollider(trimeshDesc, sBody);
     }
+
+    // Store slide entry zone for ball guidance
+    const slideWorldBox = new THREE.Box3().setFromObject(slide);
+    (sceneManager.scene as any)._slideEntryZone = {
+      minX: slideWorldBox.min.x - 0.3,
+      maxX: slideWorldBox.max.x + 0.3,
+      minZ: slideWorldBox.min.z - 0.5,
+      maxZ: slideWorldBox.min.z + 0.5,
+      centerX: (slideWorldBox.min.x + slideWorldBox.max.x) / 2,
+      targetZ: slideWorldBox.max.z,
+    };
   }
 
   // ---- Slide Pillars ----
@@ -980,23 +1015,30 @@ async function main() {
         // Unstick ball near triangle bompers
         const speed2d = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
         const HL = TABLE_LENGTH / 2;
-        const inBomperZone = pos.z > (HL - 4.5) && pos.z < (HL - 2.0) && Math.abs(pos.x) > 0.5;
-        if (inBomperZone && speed2d < 0.3 && state.isBallInPlay) {
-          // Ball is stuck near triangle bompers - kick it toward center and down
+        const inBomperZone = pos.z > (HL - 4.5) && pos.z < (HL - 1.5);
+        if (inBomperZone && speed2d < 1.5 && state.isBallInPlay) {
+          // Ball is stuck or slow near triangle bompers - kick it toward center and down
           const pushX = pos.x > 0 ? -1 : 1;
           table.ball.body.setLinvel(
-            new RAPIER.Vector3(pushX * 1.0, 0.1, 1.0),
+            new RAPIER.Vector3(pushX * 2.0, 0.2, 2.5),
             true,
           );
         }
 
-        // Unstick ball trapped under the slide
-        const inSlideZone = pos.x > -2.0 && pos.x < 1.0 && pos.z > -3.0 && pos.z < 1.0 && pos.y < 0.25;
-        if (inSlideZone && speed2d < 1.5 && state.isBallInPlay) {
-          table.ball.body.setLinvel(
-            new RAPIER.Vector3(2.5, 0.5, 2.0),
-            true,
-          );
+        // Guide ball through slide when it enters the entry zone
+        const slideZone = (sceneManager.scene as any)._slideEntryZone;
+        if (slideZone && state.isBallInPlay) {
+          const inSlideEntry = pos.x > slideZone.minX && pos.x < slideZone.maxX &&
+                               pos.z > slideZone.minZ && pos.z < slideZone.maxZ &&
+                               pos.y > 0.2 && pos.y < 1.0;
+          if (inSlideEntry) {
+            // Ball entered slide - give it a push toward the slide exit
+            const towardCenter = slideZone.centerX - pos.x;
+            table.ball.body.setLinvel(
+              new RAPIER.Vector3(towardCenter * 2, 0, 5.0),
+              true,
+            );
+          }
         }
 
       }
@@ -1115,6 +1157,11 @@ async function main() {
 
   // Start the game loop (it runs even on title screen for rendering)
   gameLoop.start();
+
+  // Loading complete - update to 100% and transition to start screen
+  loadingScreen.updateProgress(100);
+  await new Promise(resolve => setTimeout(resolve, 300)); // Brief pause at 100%
+  loadingScreen.hide();
 
   // Show start screen
   startScreen.show();
