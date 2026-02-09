@@ -39,7 +39,7 @@ export const TableLayout = {
 
   // Plunger position
   plunger: {
-    x: LAUNCH_LANE_X - 0.1,
+    x: LAUNCH_LANE_X - 0.06,
     z: HL - 1.9,
   },
 
@@ -52,22 +52,22 @@ export const TableLayout = {
 
   // Bumper positions
   bumpers: [
-    { x: -0.6, z: 1.0, color: 0xff4400, score: 200 },
-    { x: 0.8, z: 2.2, color: 0xff0044, score: 400 },
-    { x: 0.3, z: -1.6, color: 0xff4400, score: 600 },
+    { x: -0.4, z: -2.4, color: 0xff4400, score: 200 },
+    { x: 0.7, z: 0.1, color: 0xff0044, score: 400 },
+    { x: 0.9, z: -4.2, color: 0xff4400, score: 600 },
   ],
 
   // Slingshot vertices (triangular kickers above flippers)
   slingshots: {
     left: [
-      { x: -1.5, z: HL - 2.5 },
-      { x: -1.5, z: HL - 1.3 },
-      { x: -0.8, z: HL - 1.3 },
+      { x: -1.4, z: HL - 2.5 },
+      { x: -1.4, z: HL - 1.3 },
+      { x: -0.7, z: HL - 1.3 },
     ],
     right: [
-      { x: 1.5, z: HL - 2.5 },
-      { x: 1.5, z: HL - 1.3 },
-      { x: 0.8, z: HL - 1.3 },
+      { x: 1.1, z: HL - 2.5 },
+      { x: 1.1, z: HL - 1.3 },
+      { x: 0.4, z: HL - 1.3 },
     ],
   },
 
