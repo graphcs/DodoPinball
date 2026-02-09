@@ -60,7 +60,7 @@ export class Plunger extends Entity {
 
       plungerGroup.position.set(
         x - scaledCenter.x,
-        -scaledBox.min.y + 0.15,
+        -scaledBox.min.y,
         z - scaledCenter.z,
       );
 
@@ -76,7 +76,7 @@ export class Plunger extends Entity {
       );
       const material = materials.rail();
       const fallbackMesh = new THREE.Mesh(geometry, material);
-      fallbackMesh.position.set(x, 0.15, z);
+      fallbackMesh.position.set(x, 0, z);
       fallbackMesh.castShadow = true;
       scene.add(fallbackMesh);
       mesh = fallbackMesh;
@@ -84,7 +84,7 @@ export class Plunger extends Entity {
 
     // Plunger is kinematic - we move it manually
     const bodyDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
-      .setTranslation(x, 0.15, z);
+      .setTranslation(x, 0, z);
     const body = world.createRigidBody(bodyDesc);
 
     const colliderDesc = RAPIER.ColliderDesc.cuboid(
