@@ -46,7 +46,7 @@ export const TableLayout = {
   // Ball start (in launch lane, Y above the launch path surface)
   ballStart: {
     x: LAUNCH_LANE_X,
-    y: 0.2,
+    y: 0.05,
     z: HL - 2.5,
   },
 

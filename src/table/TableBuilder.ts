@@ -78,8 +78,8 @@ export function buildTable(
     // Position so the ball start (LAUNCH_LANE_X) is on top of the launch path
     lp.position.set(
       layout.ballStart.x - scaledCenter.x - 2.6,
-      -scaledBox.min.y + 0.15, // raised above the playfield surface
-      -scaledCenter.z - 0.7,  // center along table length
+      -scaledBox.min.y, // sit on the playfield surface
+      -scaledCenter.z - 0.75,  // center along table length
     );
     scene.add(lp);
 
@@ -293,7 +293,7 @@ export function buildTable(
 
   // Add invisible wall behind the plunger to prevent ball from slipping past
   const plungerWallBody = RAPIER.RigidBodyDesc.fixed()
-    .setTranslation(layout.plunger.x, 0.15, layout.plunger.z + 0.5);
+    .setTranslation(layout.plunger.x, 0, layout.plunger.z + 0.5);
   const plungerWallRb = world.createRigidBody(plungerWallBody);
   RAPIER.ColliderDesc.cuboid(0.3, 0.3, 0.05)
     .setRestitution(0.5)
