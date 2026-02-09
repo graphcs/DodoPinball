@@ -836,10 +836,12 @@ async function main() {
     shakeIntensity = 0.04;
   });
 
-  events.on('archHit', () => {
+  events.on('archHit', (e) => {
     audio.playBumperHit();
 
     // Flash the arch light
+    const idx = (e.data?.index as number) ?? 0;
+    const archLight = archLights[idx];
     if (archLight) {
       archLight.intensity = 3;
       const fadeArch = () => {
