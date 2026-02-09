@@ -82,5 +82,5 @@ export const TABLE_GRAVITY = {
 };
 
 // ---- Launch Lane ----
-export const LAUNCH_LANE_X = TABLE_WIDTH / 2 - 0.4;
+export const LAUNCH_LANE_X = TABLE_WIDTH / 2 - 0.35;
 export const LAUNCH_LANE_WIDTH = 0.5;
