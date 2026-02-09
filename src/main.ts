@@ -12,18 +12,30 @@ import { CollisionHandler, ColliderTag } from './physics/CollisionHandler';
 import { GameLoop } from './game/GameLoop';
 import { GameState } from './game/GameState';
 import { GameEvents } from './game/GameEvents';
-import { PHYSICS_TIMESTEP, BUMPER_IMPULSE, SLINGSHOT_IMPULSE, BALL_RADIUS, TABLE_LENGTH } from './game/constants';
+import { PHYSICS_TIMESTEP, BUMPER_IMPULSE, SLINGSHOT_IMPULSE, ARCH_IMPULSE, BALL_RADIUS, TABLE_LENGTH } from './game/constants';
 import { InputManager } from './input/InputManager';
 import { AudioManager } from './audio/AudioManager';
 import { HUD } from './ui/HUD';
 import { StartScreen } from './ui/StartScreen';
 import { GameOverScreen } from './ui/GameOverScreen';
+import { LoadingScreen } from './ui/LoadingScreen';
 import { buildTable, TableEntities } from './table/TableBuilder';
 import { TableLayout } from './table/TableLayout';
 
 async function main() {
+  // Show loading screen immediately
+  const loadingScreen = new LoadingScreen();
+  loadingScreen.show();
+  let loadProgress = 0;
+  const totalLoadSteps = 13;
+  const updateLoadProgress = () => {
+    loadProgress++;
+    loadingScreen.updateProgress((loadProgress / totalLoadSteps) * 100);
+  };
+
   // Initialize Rapier WASM
   await RAPIER.init();
+  updateLoadProgress();
 
   // ---- Rendering ----
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -63,28 +75,31 @@ async function main() {
   let launchPathModel: THREE.Group | undefined;
   let playfieldModel: THREE.Group | undefined;
   let buildingsModel: THREE.Group | undefined;
-  let triangleBomperModel: THREE.Group | undefined;
   const bumperModels: (THREE.Group | undefined)[] = [undefined, undefined, undefined];
   try {
     flipperModel = await fbxLoader.loadAsync('/assets/models/Flipper.fbx');
   } catch (e) {
     console.warn('Failed to load flipper model, using fallback geometry:', e);
   }
+  updateLoadProgress();
   try {
     launchPathModel = await fbxLoader.loadAsync('/assets/models/Launch path.fbx?v=' + Date.now());
   } catch (e) {
     console.warn('Failed to load launch path model:', e);
   }
+  updateLoadProgress();
   try {
     playfieldModel = await fbxLoader.loadAsync('/assets/models/Play field base.fbx?v=r4_' + Date.now());
   } catch (e) {
     console.warn('Failed to load playfield model:', e);
   }
+  updateLoadProgress();
   try {
     buildingsModel = await fbxLoader.loadAsync('/assets/models/Buildings.fbx?v=reload_' + Date.now());
   } catch (e) {
     console.warn('Failed to load buildings model:', e);
   }
+  updateLoadProgress();
   const bumperFiles = ['200 bumper.fbx', '400 bumper.fbx', '600 bumper.fbx'];
   for (let i = 0; i < bumperFiles.length; i++) {
     try {
@@ -93,11 +108,20 @@ async function main() {
       console.warn('Failed to load bumper model ' + bumperFiles[i] + ':', e);
     }
   }
+  updateLoadProgress();
+  let triangleBomperLeftModel: THREE.Group | undefined;
+  let triangleBomperRightModel: THREE.Group | undefined;
   try {
-    triangleBomperModel = await fbxLoader.loadAsync('/assets/models/Triangle bomper.fbx?v=' + Date.now());
+    triangleBomperLeftModel = await fbxLoader.loadAsync('/assets/models/Triangle bomper left.fbx?v=' + Date.now());
   } catch (e) {
-    console.warn('Failed to load triangle bomper model:', e);
+    console.warn('Failed to load triangle bomper left model:', e);
   }
+  try {
+    triangleBomperRightModel = await fbxLoader.loadAsync('/assets/models/Triangle bomper right.fbx?v=' + Date.now());
+  } catch (e) {
+    console.warn('Failed to load triangle bomper right model:', e);
+  }
+  updateLoadProgress();
   let dodoAstronautModel: THREE.Group | undefined;
   try {
     // Use a separate loader with resource path pointing to images folder
@@ -107,36 +131,48 @@ async function main() {
   } catch (e) {
     console.warn('Failed to load Dodo astronaut model:', e);
   }
+  updateLoadProgress();
   let rocketModel: THREE.Group | undefined;
   try {
     rocketModel = await fbxLoader.loadAsync('/assets/models/Rocket.fbx?v=' + Date.now());
   } catch (e) {
     console.warn('Failed to load Rocket model:', e);
   }
+  updateLoadProgress();
   let slideModel: THREE.Group | undefined;
   try {
     slideModel = await fbxLoader.loadAsync('/assets/models/Slide.fbx?v=' + Date.now());
   } catch (e) {
     console.warn('Failed to load Slide model:', e);
   }
+  updateLoadProgress();
   let slidePillarsModel: THREE.Group | undefined;
   try {
     slidePillarsModel = await fbxLoader.loadAsync('/assets/models/Slide pillars.fbx?v=' + Date.now());
   } catch (e) {
     console.warn('Failed to load Slide pillars model:', e);
   }
-  let archsModel: THREE.Group | undefined;
+  updateLoadProgress();
+  let archLeftModel: THREE.Group | undefined;
+  let archRightModel: THREE.Group | undefined;
   try {
-    archsModel = await fbxLoader.loadAsync('/assets/models/Archs.fbx?v=reload_' + Date.now());
+    archLeftModel = await fbxLoader.loadAsync('/assets/models/Arch left.fbx?v=' + Date.now());
   } catch (e) {
-    console.warn('Failed to load Archs model:', e);
+    console.warn('Failed to load Arch left model:', e);
   }
+  try {
+    archRightModel = await fbxLoader.loadAsync('/assets/models/Arch right.fbx?v=' + Date.now());
+  } catch (e) {
+    console.warn('Failed to load Arch right model:', e);
+  }
+  updateLoadProgress();
   let plungerModel: THREE.Group | undefined;
   try {
     plungerModel = await fbxLoader.loadAsync('/assets/models/Plunger.fbx?v=' + Date.now());
   } catch (e) {
     console.warn('Failed to load Plunger model:', e);
   }
+  updateLoadProgress();
 
   // ---- Build Table ----
   const table = buildTable(
@@ -150,7 +186,8 @@ async function main() {
     playfieldModel,
     buildingsModel,
     bumperModels,
-    triangleBomperModel,
+    triangleBomperLeftModel,
+    triangleBomperRightModel,
     plungerModel,
   );
 
@@ -391,7 +428,7 @@ async function main() {
 
     const maxDim = Math.max(sSize.x, sSize.y, sSize.z);
     const sScale = (TABLE_LENGTH * 0.7) / (maxDim || 1);
-    slide.scale.setScalar(sScale * 0.98 * 0.98 * 0.96 * 0.96);
+    slide.scale.setScalar(sScale * 0.98 * 0.98 * 0.96 * 0.96 * 0.7 * 0.9 * 0.9 * 0.9);
 
     const scaledSBox = new THREE.Box3().setFromObject(slide);
     const scaledSCenter = new THREE.Vector3();
@@ -399,12 +436,11 @@ async function main() {
 
     // Position on the table and tilt the back end up
     slide.position.set(
-      -scaledSCenter.x - 0.7,
-      -scaledSBox.min.y + 0.15,
-      -scaledSCenter.z - 1.3,
+      -scaledSCenter.x + 0.55,
+      -scaledSBox.min.y,
+      -scaledSCenter.z + 0.2,
     );
-    // Rotate slightly around X axis to tilt the back (top) end up
-    slide.rotation.x = 0.10;
+    slide.rotation.x = 0;
     sceneManager.scene.add(slide);
 
     // Add trimesh collider so ball can run on the slide
@@ -442,14 +478,8 @@ async function main() {
     });
 
     if (sVertices.length > 0 && sIndices.length > 0) {
-      // Make trimesh double-sided by adding reverse-winding triangles
-      const doubleIndices: number[] = [...sIndices];
-      for (let i = 0; i < sIndices.length; i += 3) {
-        doubleIndices.push(sIndices[i], sIndices[i + 2], sIndices[i + 1]);
-      }
-
       const vertices = new Float32Array(sVertices);
-      const indices = new Uint32Array(doubleIndices);
+      const indices = new Uint32Array(sIndices);
 
       const sBodyDesc = RAPIER.RigidBodyDesc.fixed();
       const sBody = physicsWorld.world.createRigidBody(sBodyDesc);
@@ -501,11 +531,18 @@ async function main() {
     sceneManager.scene.add(pillars);
   }
 
-  // ---- Archs ----
-  let archLight: THREE.PointLight | null = null;
-  if (archsModel) {
-    const archs = archsModel.clone();
-    archs.traverse((child) => {
+  // ---- Archs (Left and Right) ----
+  const archLights: THREE.PointLight[] = [];
+  const archModels = [
+    { model: archLeftModel, x: -2.0, z: -1.2, side: 'left' },
+    { model: archRightModel, x: 1.2, z: 1.8, side: 'right' },
+  ];
+
+  archModels.forEach(({ model, x, z, side }, index) => {
+    if (!model) return;
+
+    const arch = model.clone();
+    arch.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
         mesh.castShadow = true;
@@ -515,52 +552,46 @@ async function main() {
           if (mat) {
             mat.side = THREE.DoubleSide;
             mat.visible = true;
-            // Lighten red/dark pink materials
-            if ('color' in mat) {
-              const c = (mat as THREE.MeshStandardMaterial).color;
-              if (c && c.r > 0.3 && c.g < 0.3 && c.b < 0.3) {
-                c.lerp(new THREE.Color(1, 0.7, 0.7), 0.15);
-              }
-            }
           }
         });
       }
     });
 
-    const aBox = new THREE.Box3().setFromObject(archs);
+    const aBox = new THREE.Box3().setFromObject(arch);
     const aSize = new THREE.Vector3();
     aBox.getSize(aSize);
     const aCenter = new THREE.Vector3();
     aBox.getCenter(aCenter);
 
     const maxDim = Math.max(aSize.x, aSize.y, aSize.z);
-    const aScale = (TABLE_LENGTH * 0.402 * 0.98 * 0.98) / (maxDim || 1);
-    archs.scale.setScalar(aScale);
+    const aScale = (TABLE_LENGTH * 0.2) / (maxDim || 1);
+    arch.scale.setScalar(aScale * 0.85);
 
-    const scaledABox = new THREE.Box3().setFromObject(archs);
+    const scaledABox = new THREE.Box3().setFromObject(arch);
     const scaledACenter = new THREE.Vector3();
     scaledABox.getCenter(scaledACenter);
 
-    archs.position.set(
-      -scaledACenter.x - 0.2,
+    arch.position.set(
+      x - scaledACenter.x,
       -scaledABox.min.y,
-      -scaledACenter.z - 0.1,
+      -scaledACenter.z + z,
     );
-    sceneManager.scene.add(archs);
+    sceneManager.scene.add(arch);
 
-    // Add hit light to the archs
-    archLight = new THREE.PointLight(0xe78299, 0, 4);
-    archLight.position.set(archs.position.x, 1.0, archs.position.z);
+    // Add hit light
+    const archLight = new THREE.PointLight(0xe78299, 0, 4);
+    archLight.position.set(x, 1.0, z);
     sceneManager.scene.add(archLight);
+    archLights.push(archLight);
 
-    // Add trimesh collider for the archs
-    archs.updateMatrixWorld(true);
+    // Add trimesh collider
+    arch.updateMatrixWorld(true);
 
     const aVertices: number[] = [];
     const aIndices: number[] = [];
     let aVertexOffset = 0;
 
-    archs.traverse((child) => {
+    arch.traverse((child) => {
       if (!(child as THREE.Mesh).isMesh) return;
       const mesh = child as THREE.Mesh;
       const geo = mesh.geometry;
@@ -599,9 +630,12 @@ async function main() {
         .setFriction(0.1)
         .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
       const aCollider = physicsWorld.world.createCollider(trimeshDesc, aBody);
-      collisionHandler.registerCollider(aCollider.handle, ColliderTag.Arch, 0);
+      collisionHandler.registerCollider(aCollider.handle, ColliderTag.Arch, index);
     }
-  }
+  });
+
+  // Store arch lights for event handling
+  (sceneManager.scene as any)._archLights = archLights;
 
   // ---- Decorative Planets near playfield ----
   const planetConfigs: { pos: number[]; radius: number; color: number; emissive: number; ring?: { color: number; tilt: number } }[] = [
@@ -802,10 +836,12 @@ async function main() {
     shakeIntensity = 0.04;
   });
 
-  events.on('archHit', () => {
+  events.on('archHit', (e) => {
     audio.playBumperHit();
 
     // Flash the arch light
+    const idx = (e.data?.index as number) ?? 0;
+    const archLight = archLights[idx];
     if (archLight) {
       archLight.intensity = 3;
       const fadeArch = () => {
@@ -825,19 +861,18 @@ async function main() {
       const vel = table.ball.body.linvel();
       const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
       const pushX = ballPos.x > 0 ? -1 : 1;
-      const ARCH_BOUNCE = 1.6;
 
       if (speed < 0.5) {
         // Ball is stuck - push it away firmly toward center and down
         table.ball.body.setLinvel(
-          new RAPIER.Vector3(pushX * ARCH_BOUNCE, 0.1, ARCH_BOUNCE * 0.8),
+          new RAPIER.Vector3(pushX * ARCH_IMPULSE, 0.1, ARCH_IMPULSE * 0.8),
           true,
         );
       } else {
         table.ball.applyImpulse({
-          x: pushX * ARCH_BOUNCE * 0.6,
+          x: pushX * ARCH_IMPULSE * 0.6,
           y: 0,
-          z: ARCH_BOUNCE * 0.6,
+          z: ARCH_IMPULSE * 0.6,
         });
       }
     }
@@ -990,11 +1025,14 @@ async function main() {
           );
         }
 
-        // Unstick ball trapped under the slide
-        const inSlideZone = pos.x > -2.0 && pos.x < 1.0 && pos.z > -3.0 && pos.z < 1.0 && pos.y < 0.25;
-        if (inSlideZone && speed2d < 1.5 && state.isBallInPlay) {
+        // Unstick ball near arches (left arch around x:-1.9, z:-1.2; right arch around x:1.1, z:1.8)
+        const nearLeftArch = Math.abs(pos.x - (-1.9)) < 1.0 && Math.abs(pos.z - (-1.2)) < 1.0;
+        const nearRightArch = Math.abs(pos.x - 1.1) < 1.0 && Math.abs(pos.z - 1.8) < 1.0;
+        if ((nearLeftArch || nearRightArch) && speed2d < 0.5 && state.isBallInPlay) {
+          // Ball is stuck near arch - push it toward center and down the table
+          const pushX = pos.x > 0 ? -1 : 1;
           table.ball.body.setLinvel(
-            new RAPIER.Vector3(2.5, 0.5, 2.0),
+            new RAPIER.Vector3(pushX * 1.5, 0.1, 1.2),
             true,
           );
         }
@@ -1115,6 +1153,11 @@ async function main() {
 
   // Start the game loop (it runs even on title screen for rendering)
   gameLoop.start();
+
+  // Loading complete - transition to start screen
+  loadingScreen.updateProgress(100);
+  await new Promise(resolve => setTimeout(resolve, 300));
+  loadingScreen.hide();
 
   // Show start screen
   startScreen.show();

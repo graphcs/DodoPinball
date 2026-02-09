@@ -42,7 +42,8 @@ export function buildTable(
   playfieldModel?: THREE.Group,
   buildingsModel?: THREE.Group,
   bumperModels?: (THREE.Group | undefined)[],
-  triangleBomperModel?: THREE.Group,
+  triangleBomperLeftModel?: THREE.Group,
+  triangleBomperRightModel?: THREE.Group,
   plungerModel?: THREE.Group,
 ): TableEntities {
   const layout = TableLayout;
@@ -64,10 +65,10 @@ export function buildTable(
     const center = new THREE.Vector3();
     box.getCenter(center);
 
-    // Scale to fit the table height, slightly smaller
-    const targetHeight = TABLE_LENGTH * 0.839;
+    // Scale to fit the table height (longer path)
+    const targetHeight = TABLE_LENGTH * 0.95;
     const uniformScale = targetHeight / (size.z || size.y || size.x || 1);
-    lp.scale.setScalar(uniformScale);
+    lp.scale.setScalar(uniformScale * 0.9 * 0.95 * 0.95 * 0.95 * 0.98 * 1.05 * 1.1 * 0.95 * 1.1 * 0.98);
 
     // Recompute after scaling
     const scaledBox = new THREE.Box3().setFromObject(lp);
@@ -76,9 +77,9 @@ export function buildTable(
 
     // Position so the ball start (LAUNCH_LANE_X) is on top of the launch path
     lp.position.set(
-      layout.ballStart.x - scaledCenter.x - 0.65,
+      layout.ballStart.x - scaledCenter.x - 2.6,
       -scaledBox.min.y + 0.15, // raised above the playfield surface
-      -scaledCenter.z - 0.6,  // center along table length, shifted up
+      -scaledCenter.z - 0.7,  // center along table length
     );
     scene.add(lp);
 
@@ -328,9 +329,19 @@ export function buildTable(
     collisionHandler.registerCollider(bumper.getColliderHandle(), ColliderTag.Bumper, i);
   });
 
-  // ---- Triangle Bompers ----
-  if (triangleBomperModel) {
-    const tb = triangleBomperModel.clone();
+  // ---- Triangle Bompers (Left and Right) ----
+  const HL = TABLE_LENGTH / 2;
+  const triangleBomperModels = [
+    { model: triangleBomperLeftModel, x: -1.7, side: 'left' },
+    { model: triangleBomperRightModel, x: 1.7, side: 'right' },
+  ];
+
+  const triangleBomperLights: THREE.PointLight[] = [];
+
+  triangleBomperModels.forEach(({ model, x, side }, index) => {
+    if (!model) return;
+
+    const tb = model.clone();
 
     // Keep original materials, fix rendering
     tb.traverse((child) => {
@@ -358,8 +369,8 @@ export function buildTable(
     tbBox.getCenter(tbCenter);
 
     const maxDim = Math.max(tbSize.x, tbSize.y, tbSize.z);
-    const tbScale = (TABLE_WIDTH * 0.691) / (maxDim || 1);
-    tb.scale.setScalar(tbScale);
+    const tbScale = (TABLE_WIDTH * 0.15) / (maxDim || 1);
+    tb.scale.setScalar(tbScale * 1.1);
 
     // Recompute after scaling
     const scaledTbBox = new THREE.Box3().setFromObject(tb);
@@ -367,11 +378,10 @@ export function buildTable(
     scaledTbBox.getCenter(scaledTbCenter);
 
     // Position above the flippers
-    const HL = TABLE_LENGTH / 2;
     tb.position.set(
-      -scaledTbCenter.x,
+      x - scaledTbCenter.x,
       -scaledTbBox.min.y,
-      -scaledTbCenter.z + HL - 3.0,
+      -scaledTbCenter.z + HL - 2.6,
     );
     scene.add(tb);
 
@@ -421,22 +431,18 @@ export function buildTable(
         .setFriction(0.1)
         .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
       const tbCollider = world.createCollider(trimeshDesc, tbBody);
-      collisionHandler.registerCollider(tbCollider.handle, ColliderTag.TriangleBomper, 0);
+      collisionHandler.registerCollider(tbCollider.handle, ColliderTag.TriangleBomper, index);
     }
 
-    // Add lights for each triangle bomper (left and right)
-    const tbLeftLight = new THREE.PointLight(0xff4400, 0, 3);
-    tbLeftLight.position.set(-1.2, 0.5, HL - 3.5);
-    scene.add(tbLeftLight);
+    // Add light for this triangle bomper
+    const tbLight = new THREE.PointLight(0xff4400, 0, 3);
+    tbLight.position.set(x, 0.5, HL - 2.5);
+    scene.add(tbLight);
+    triangleBomperLights.push(tbLight);
+  });
 
-    const tbRightLight = new THREE.PointLight(0xff4400, 0, 3);
-    tbRightLight.position.set(1.2, 0.5, HL - 3.5);
-    scene.add(tbRightLight);
-
-    // Store references for event handling
-    (scene as any)._triangleBomperLights = [tbLeftLight, tbRightLight];
-    (scene as any)._triangleBomperGroup = tb;
-  }
+  // Store references for event handling
+  (scene as any)._triangleBomperLights = triangleBomperLights;
 
   // ---- Slingshots (disabled) ----
   const slingshots: Slingshot[] = [];
@@ -514,7 +520,7 @@ export function buildTable(
     bldg.position.set(
       -scaledBldgCenter.x,
       -scaledBldgBox.min.y,
-      -HL - scaledBldgCenter.z,
+      -HL - scaledBldgCenter.z + 0.5,
     );
     scene.add(bldg);
 
@@ -560,7 +566,7 @@ export function buildTable(
       const bldgBody = world.createRigidBody(bldgBodyDesc);
 
       const trimeshDesc = RAPIER.ColliderDesc.trimesh(vertices, indices)
-        .setRestitution(0.5)
+        .setRestitution(1.2)
         .setFriction(0.3);
       world.createCollider(trimeshDesc, bldgBody);
     }

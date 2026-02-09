@@ -8,7 +8,7 @@ export const PLAYFIELD_THICKNESS = 0.2;
 
 // ---- Ball ----
 export const BALL_RADIUS = 0.13;
-export const BALL_MASS = 0.08;
+export const BALL_MASS = 0.15;
 export const BALL_RESTITUTION = 0.2;
 export const BALL_FRICTION = 0.2;
 export const BALL_LINEAR_DAMPING = 0.05;
@@ -20,25 +20,28 @@ export const FLIPPER_WIDTH = 0.15;
 export const FLIPPER_HEIGHT = 0.15;
 export const FLIPPER_REST_ANGLE = -0.45; // radians from center
 export const FLIPPER_MAX_ANGLE = 0.45;
-export const FLIPPER_SPEED = 18; // radians per second
+export const FLIPPER_SPEED = 14; // radians per second
 export const FLIPPER_Y = 0.1;
 
 // ---- Plunger ----
 export const PLUNGER_MAX_PULL = 0.8;
 export const PLUNGER_CHARGE_SPEED = 2.5;
-export const PLUNGER_LAUNCH_SPEED = 15; // max ball speed in -Z (m/s)
+export const PLUNGER_LAUNCH_SPEED = 22; // max ball speed in -Z (m/s)
 export const PLUNGER_WIDTH = 0.35;
 export const PLUNGER_HEIGHT = 0.6;
 
 // ---- Bumpers ----
 export const BUMPER_RADIUS = 0.25;
 export const BUMPER_HEIGHT = 0.3;
-export const BUMPER_IMPULSE = 0.5;
+export const BUMPER_IMPULSE = 2.5;
 export const BUMPER_SCORE = 100;
 
 // ---- Slingshots ----
 export const SLINGSHOT_IMPULSE = 3.0;
 export const SLINGSHOT_SCORE = 10;
+
+// ---- Arches ----
+export const ARCH_IMPULSE = 3.0;
 
 // ---- Drop Targets ----
 export const DROP_TARGET_WIDTH = 0.3;

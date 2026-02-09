@@ -150,3 +150,43 @@ html, body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
+
+/* Loading Screen */
+#overlay .loading-screen {
+  margin-top: 0;
+}
+
+#overlay .loading-title {
+  font-family: 'DogicaPixel', sans-serif;
+  font-size: 32px;
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255,200,0,0.8);
+  margin-bottom: 40px;
+  letter-spacing: 8px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+#overlay .loading-bar-container {
+  width: 300px;
+  height: 20px;
+  background: rgba(255,255,255,0.1);
+  border: 2px solid rgba(255,215,0,0.5);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+#overlay .loading-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #ffd700, #ff6b35);
+  border-radius: 8px;
+  transition: width 0.3s ease-out;
+}
+
+#overlay .loading-progress {
+  font-family: 'DogicaPixel', sans-serif;
+  font-size: 18px;
+  color: #ccc;
+  letter-spacing: 2px;
+}
